@@ -2,7 +2,7 @@ from concurrent import futures
 import logging
 
 import sys, os
-sys.path.append('/home/alex/mipt/1c/diploma2/hello/dating-diploma/python/generated')
+sys.path.append('./generated')
 
 import grpc
 import generated.dating_server_pb2 as dating_server_pb2

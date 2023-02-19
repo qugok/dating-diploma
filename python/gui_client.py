@@ -3,7 +3,7 @@ import sys  # sys нужен для передачи argv в QApplication
 from PyQt5 import QtWidgets
 
 import logging
-sys.path.append('/home/alex/mipt/1c/diploma2/hello/dating-diploma/python/generated')
+sys.path.append('/home/diploma/dating-diploma/python/generated')
 
 import grpc
 import generated.user_pb2 as user_pb2
@@ -32,7 +32,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         key = user_pb2.TUserKey()
         try:
             text_format.Parse(key_text, key)
-            with grpc.insecure_channel('localhost:50051') as channel:
+            with grpc.insecure_channel('51.250.13.10:50051') as channel:
                 stub = dating_server_pb2_grpc.DatingServerStub(channel)
                 self.status.setText("Requesting Read...")
                 response = stub.GetUser(dating_server_pb2.UserRequest(Key=key))
@@ -47,7 +47,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         user = user_pb2.TUser()
         try:
             text_format.Parse(user_text, user)
-            with grpc.insecure_channel('localhost:50051') as channel:
+            with grpc.insecure_channel('51.250.13.10:50051') as channel:
                 stub = dating_server_pb2_grpc.DatingServerStub(channel)
                 self.status.setText("Requesting Write...")
                 response:dating_server_pb2.SetUserReply = stub.SetUser(dating_server_pb2.SetUserRequest(User=user))
@@ -66,7 +66,7 @@ def run():
     print("App Started!")
     app.exec_()  # и запускаем приложение
 
-    # with grpc.insecure_channel('localhost:50051') as channel:
+    # with grpc.insecure_channel('51.250.13.10:50051') as channel:
     #     stub = dating_server_pb2_grpc.DatingServerStub(channel)
     #     key = user_pb2.TUserKey(Hash=4567890987)
     #     response = stub.GetUser(dating_server_pb2.UserRequest(Key=key))

@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import logging
 import sys, os
-sys.path.append('/home/alex/mipt/1c/diploma2/hello/dating-diploma/python/generated')
+sys.path.append('./generated')
 
 import grpc
 import generated.user_pb2 as user_pb2

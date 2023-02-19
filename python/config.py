@@ -2,7 +2,7 @@ import sys, os
 import generated.config_pb2 as config_pb2
 from google.protobuf import text_format
 
-sys.path.append('/home/alex/mipt/1c/diploma2/hello/dating-diploma/python/generated')
+# sys.path.append('./generated')
 
 def read_configs(path="../private_data.txt.pb"):
     with open(path, 'r+') as file:

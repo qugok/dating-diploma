@@ -1,0 +1,19 @@
+curl -O https://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-amd64.deb
+sudo dpkg -i ./couchbase-release-1.0-amd64.deb
+sudo apt-get update
+sudo apt-get install couchbase-server-community
+sudo systemctl start couchbase-server
+
+sudo vim authorized_keys
+
+sudo apt install git
+
+git clone git@github.com:qugok/dating-diploma.git
+
+sudo apt install python-is-python3
+sudo apt install python3-pip
+sudo python -m pip install grpcio
+
+python -m pip install grpcio-tools
+sudo python -m pip install couchbase
+

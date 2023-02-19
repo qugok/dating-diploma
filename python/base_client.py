@@ -36,9 +36,8 @@ cluster = Cluster('couchbase://127.0.0.1', ClusterOptions(auth))
 cluster.wait_until_ready(timedelta(seconds=5))
 
 # get a reference to our bucket
-cb = cluster.bucket(bucket_name)
+cb = cluster.bucket("dating-data")
 
-cb_coll = cb.scope("inventory").collection("airline")
 user_data_collection = cb.scope("protobufs").collection("user_data")
 
 # Get a reference to the default collection, required for older Couchbase server versions

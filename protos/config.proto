@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package Config;
-
-message TPrivateData {
-    string Username = 1;
-    string Password = 2;
-}

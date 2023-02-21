@@ -3,7 +3,7 @@ import sys  # sys нужен для передачи argv в QApplication
 from PyQt5 import QtWidgets
 
 import logging
-sys.path.append('/home/diploma/dating-diploma/python/generated')
+sys.path.append('./generated')
 
 import grpc
 import generated.user_pb2 as user_pb2

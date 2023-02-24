@@ -25,6 +25,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         self.readButton.clicked.connect(self.read_user)
         self.writeButton.clicked.connect(self.write_user)
+        self.status.setText("приветики")
 
     def read_user(self):
         self.status.setText("Preparing Read Request")
@@ -36,7 +37,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                 stub = dating_server_pb2_grpc.DatingServerStub(channel)
                 self.status.setText("Requesting Read...")
                 response = stub.GetUser(dating_server_pb2.UserRequest(Key=key))
-                self.UserData.setText(text_format.MessageToString(response.User))
+                self.UserData.setText(text_format.MessageToString(response.User, True))
                 self.status.setText("Success Read")
         except Exception as e:
             self.status.setText("Exception: " + str(e))

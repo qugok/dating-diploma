@@ -25,6 +25,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         self.readButton.clicked.connect(self.read_user)
         self.writeButton.clicked.connect(self.write_user)
+        self.SearchUsers.clicked.connect(self.search_users)
         self.status.setText("приветики")
 
     def read_user(self):
@@ -56,6 +57,23 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                     self.status.setText("Got Error:" + response.ErrorMessage)
                 if response.HasField("User"):
                     self.UserDataEdit.setText(text_format.MessageToString(response.User))
+        except Exception as e:
+            self.status.setText("Exception: " + str(e))
+
+    def search_users(self):
+        self.status.setText("Preparing Search Request")
+        geo_text = self.GeoInfo.toPlainText()
+        geo = user_pb2.TGeo()
+        try:
+            text_format.Parse(geo_text, geo)
+            with grpc.insecure_channel('51.250.13.10:50051') as channel:
+                stub = dating_server_pb2_grpc.DatingServerStub(channel)
+                self.status.setText("Requesting Search...")
+                response:dating_server_pb2.NeighboursReply = stub.SetUser(dating_server_pb2.NeighboursRequest(Geo=geo))
+                if response.ErrorMessage is not None:
+                    self.status.setText("Got Error:" + response.ErrorMessage)
+                if response.HasField("Keys"):
+                    self.UsersKeys.setText(text_format.MessageToString(response.Keys))
         except Exception as e:
             self.status.setText("Exception: " + str(e))
 

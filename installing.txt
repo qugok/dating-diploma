@@ -18,6 +18,7 @@ python -m pip install grpcio-tools
 sudo python -m pip install couchbase
 
 
+pyuic5 design.ui -o python/design.py
 
 
 

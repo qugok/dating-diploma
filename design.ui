@@ -61,6 +61,31 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QTextEdit" name="GeoInfo">
+          <property name="placeholderText">
+           <string>write geo here </string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextBrowser" name="UsersKeys">
+          <property name="placeholderText">
+           <string>here will be key list</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="SearchUsers">
+          <property name="text">
+           <string>Search Near</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
          <widget class="QTextEdit" name="UserDataEdit">

@@ -12,6 +12,8 @@ from couchbase.cluster import Cluster
 from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
                                QueryOptions, UpsertOptions, GetOptions)
 from couchbase.transcoder import RawBinaryTranscoder
+import couchbase.search as search
+from couchbase.logic.search_queries import GeoDistanceQuery
 
 # Update this to your cluster
 # private_data = read_configs()
@@ -27,7 +29,7 @@ from couchbase.transcoder import RawBinaryTranscoder
 #     password,
 # )
 
-class couchbaseClient:
+class CouchbaseClient:
     def __init__(self, server = 'couchbase://127.0.0.1', configs = read_configs()):
         auth = PasswordAuthenticator(
             configs.Username,
@@ -71,6 +73,8 @@ class couchbaseClient:
         return user
 
     def __insert_to_external(self, user: user_pb2.TUser):
+        if not user.HasField("LastGeo"):
+            return
         def make_geo_format(user: user_pb2.TUser):
             return {
                 "geo": {
@@ -84,6 +88,19 @@ class couchbaseClient:
                 make_geo_format(user)
             )
             print(result)
+        except Exception as e:
+            print(e)
+            raise e
+
+    def search_near(self, geo: user_pb2.TGeo, distance = "100km"):
+        try:
+            result = self.cluster.search_query(
+                "geo_user",
+                GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude))
+            )
+            keys = [user_pb2.TUserKey(Hash=int(row.id)) for row in result.rows()]
+            print(keys)
+            return keys
         except Exception as e:
             print(e)
             raise e
@@ -107,43 +124,43 @@ class couchbaseClient:
 
 # upsert document function
 
-def insert_user(user: user_pb2.TUser):
-    try:
-        result = user_data_collection.upsert(str(user.Key.Hash), user.SerializeToString(), UpsertOptions(transcoder=transcoder))
-        print(result)
-    except Exception as e:
-        print(e)
-        raise e
+# def insert_user(user: user_pb2.TUser):
+#     try:
+#         result = user_data_collection.upsert(str(user.Key.Hash), user.SerializeToString(), UpsertOptions(transcoder=transcoder))
+#         print(result)
+#     except Exception as e:
+#         print(e)
+#         raise e
 
-def read_user(key: user_pb2.TUserKey):
-    try:
-        result = user_data_collection.get(str(key.Hash), GetOptions(transcoder=transcoder))
-        user = user_pb2.TUser()
-        user.ParseFromString(result.content_as[bytes])
-        return user
-    except Exception as e:
-        print(e)
-        raise e
-
-
-def insert_raw_data(key, data):
-    print("\nInsert Data: ")
-    try:
-        result = cb_coll_default.upsert(key, data)
-        print(result)
-    except Exception as e:
-        print(e)
+# def read_user(key: user_pb2.TUserKey):
+#     try:
+#         result = user_data_collection.get(str(key.Hash), GetOptions(transcoder=transcoder))
+#         user = user_pb2.TUser()
+#         user.ParseFromString(result.content_as[bytes])
+#         return user
+#     except Exception as e:
+#         print(e)
+#         raise e
 
 
-def read_raw_data(key):
-    print("\nRead Data: ")
-    try:
-        result = cb_coll_default.get(key)
-        print(result.content_as[str])
-        print(result)
-        return result.content_as[str]
-    except Exception as e:
-        print(e)
+# def insert_raw_data(key, data):
+#     print("\nInsert Data: ")
+#     try:
+#         result = cb_coll_default.upsert(key, data)
+#         print(result)
+#     except Exception as e:
+#         print(e)
+
+
+# def read_raw_data(key):
+#     print("\nRead Data: ")
+#     try:
+#         result = cb_coll_default.get(key)
+#         print(result.content_as[str])
+#         print(result)
+#         return result.content_as[str]
+#     except Exception as e:
+#         print(e)
 
 
 # insert_raw_data("keyabra", "kadabra")

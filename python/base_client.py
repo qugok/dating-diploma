@@ -10,7 +10,7 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 # needed for options -- cluster, timeout, SQL++ (N1QL) query, etc.
 from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
-                               QueryOptions, UpsertOptions, GetOptions)
+                               QueryOptions, UpsertOptions, GetOptions, SearchOptions)
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
 from couchbase.logic.search_queries import GeoDistanceQuery
@@ -96,11 +96,25 @@ class CouchbaseClient:
         try:
             result = self.cluster.search_query(
                 "geo_user",
-                GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude))
+                GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude)),
+                SearchOptions(limit=10)
             )
             keys = [user_pb2.TUserKey(Hash=int(row.id)) for row in result.rows()]
-            print(keys)
             return keys
+        except Exception as e:
+            print(e)
+            raise e
+
+    def get_nearest(self, geo: user_pb2.TGeo):
+        try:
+
+            result = self.cluster.search_query(
+                "geo_user",
+                GeoDistanceQuery("30000km", (geo.Longitude, geo.Latitude)),
+                SearchOptions(sort=["geo_distance"], limit=1)
+            )
+            key = user_pb2.TUserKey(Hash=int(list(result)[0].id))
+            return self.__read_user(key)
         except Exception as e:
             print(e)
             raise e

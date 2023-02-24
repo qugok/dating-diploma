@@ -17,10 +17,12 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         self.BDClient = CouchbaseClient()
 
     def GetUser(self, request, context):
+        print("GetUser")
         print("Got Request with Key :", user_utils.KeyToString(request.Key))
         return dating_server_pb2.UserReply(User=self.BDClient.read_user(request.Key))
 
     def SetUser(self, request, context):
+        print("SetUser")
         try :
             self.BDClient.insert_user(request.User)
         except Exception as e:
@@ -29,12 +31,20 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         return dating_server_pb2.SetUserReply(User=self.BDClient.read_user(request.User.Key))
 
     def SearchAllNeighbours(self, request, context):
+        print("SearchAllNeighbours")
         try :
-            return dating_server_pb2.NeighboursReply(Keys=self.BDClient.search_near(request.Geo))
+            return dating_server_pb2.NeighboursReply(Keys=self.BDClient.search_near(request.Geo, request.Distance))
         except Exception as e:
-            print("SetUser: got exception ::", e)
+            print("SearchAllNeighbours: got exception ::", e)
             return dating_server_pb2.NeighboursReply(ErrorMessage=str(e))
-        return dating_server_pb2.SetUserReply(User=self.BDClient.read_user(request.User.Key))
+
+    def FindNearest(self, request, context):
+        print("FindNearest")
+        try :
+            return dating_server_pb2.NearestReply(Keys=self.BDClient.get_nearest(request.Geo))
+        except Exception as e:
+            print("FindNearest: got exception ::", e)
+            return dating_server_pb2.NearestReply(ErrorMessage=str(e))
 
 
 def server():

@@ -25,6 +25,8 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         self.readButton.clicked.connect(self.read_user)
         self.writeButton.clicked.connect(self.write_user)
+        self.SearchUsers.clicked.connect(self.search)
+        self.status.setText("приветики")
 
     def read_user(self):
         self.status.setText("Preparing Read Request")
@@ -36,7 +38,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                 stub = dating_server_pb2_grpc.DatingServerStub(channel)
                 self.status.setText("Requesting Read...")
                 response = stub.GetUser(dating_server_pb2.UserRequest(Key=key))
-                self.UserData.setText(text_format.MessageToString(response.User))
+                self.UserData.setText(text_format.MessageToString(response.User, True))
                 self.status.setText("Success Read")
         except Exception as e:
             self.status.setText("Exception: " + str(e))
@@ -54,7 +56,41 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
                 if response.ErrorMessage is not None:
                     self.status.setText("Got Error:" + response.ErrorMessage)
                 if response.HasField("User"):
-                    self.UserDataEdit.setText(text_format.MessageToString(response.User))
+                    self.UserDataEdit.setText(text_format.MessageToString(response.User, True))
+        except Exception as e:
+            self.status.setText("Exception: " + str(e))
+
+    def search(self):
+        if self.NearestUser.isChecked():
+            self.__find_nearest()
+        else:
+            self.__search_users()
+
+    def __search_users(self):
+        self.status.setText("Preparing Search Request")
+        geo_text = self.GeoInfo.toPlainText()
+        geo = user_pb2.TGeo()
+        try:
+            text_format.Parse(geo_text, geo)
+            with grpc.insecure_channel('51.250.13.10:50051') as channel:
+                stub = dating_server_pb2_grpc.DatingServerStub(channel)
+                self.status.setText("Requesting Search...")
+                response:dating_server_pb2.NeighboursReply = stub.SearchAllNeighbours(dating_server_pb2.NeighboursRequest(Geo=geo))
+                self.UsersKeys.setText(text_format.MessageToString(response, True))
+        except Exception as e:
+            self.status.setText("Exception: " + str(e))
+
+    def __find_nearest(self):
+        self.status.setText("Preparing Find Request")
+        geo_text = self.GeoInfo.toPlainText()
+        geo = user_pb2.TGeo()
+        try:
+            text_format.Parse(geo_text, geo)
+            with grpc.insecure_channel('51.250.13.10:50051') as channel:
+                stub = dating_server_pb2_grpc.DatingServerStub(channel)
+                self.status.setText("Requesting Find...")
+                response:dating_server_pb2.NearestReply = stub.FindNearest(dating_server_pb2.NearestRequest(Geo=geo))
+                self.UsersKeys.setText(text_format.MessageToString(response, True))
         except Exception as e:
             self.status.setText("Exception: " + str(e))
 
@@ -80,8 +116,24 @@ if __name__ == '__main__':
 
 """
 Key {
-Hash: 4567890987
+  Hash: 4567890987
 }
 Name: "Alex"
 Descripton: "ай, выхади за меня дарагая, лучшый парень ever!"
+LastGeo {
+  Latitude: 50.000000
+  Longitude: 1.000000
+}
+
+
+
+Key {
+  Hash: 4563453387
+}
+Name: "Ally"
+Descripton: "Привет"
+LastGeo {
+  Latitude: 50.962057
+  Longitude: 1.954764
+}
 """

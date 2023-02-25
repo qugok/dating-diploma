@@ -136,5 +136,4 @@ LastGeo {
   Latitude: 50.962057
   Longitude: 1.954764
 }
-
 """

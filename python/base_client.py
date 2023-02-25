@@ -14,6 +14,7 @@ from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
 from couchbase.logic.search_queries import GeoDistanceQuery
+from couchbase.logic.search import SortGeoDistance
 
 # Update this to your cluster
 # private_data = read_configs()
@@ -92,7 +93,9 @@ class CouchbaseClient:
             print(e)
             raise e
 
-    def search_near(self, geo: user_pb2.TGeo, distance = "100km"):
+    def search_near(self, geo: user_pb2.TGeo, distance = None):
+        distance = distance or "100km"
+        print("dist:", distance)
         try:
             result = self.cluster.search_query(
                 "geo_user",
@@ -111,7 +114,11 @@ class CouchbaseClient:
             result = self.cluster.search_query(
                 "geo_user",
                 GeoDistanceQuery("30000km", (geo.Longitude, geo.Latitude)),
-                SearchOptions(sort=["geo_distance"], limit=1)
+                SearchOptions(
+                    fields = ["geo"],
+                    explain=True,
+                    sort = [SortGeoDistance((geo.Longitude, geo.Latitude), "geo")]
+                )
             )
             key = user_pb2.TUserKey(Hash=int(list(result)[0].id))
             return self.__read_user(key)

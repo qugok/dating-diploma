@@ -11,6 +11,7 @@ import user_utils
 from base_client import CouchbaseClient
 
 from misc import SetOkReplyStatus, SetErrorReply
+from validation import validate_user, validate_set_reaction
 
 class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
@@ -21,8 +22,9 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
     def SimpleRequestProcessing(requestName:str, reply_class, make_kwargs):
         print(requestName)
         try :
+            kws = make_kwargs()
             return SetOkReplyStatus(
-                reply_class(make_kwargs())
+                reply_class(**kws)
             )
         except Exception as e:
             print(f"{requestName}: got exception ::", e)
@@ -30,11 +32,11 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
 
     def GetUser(self, request, context):
-        return SimpleRequest(
+        return DatingServer.SimpleRequestProcessing(
             "GetUser",
             dating_server_pb2.GetUserReply,
             lambda : {
-                "User"=self.BDClient.read_user(request.Key)
+                "User": self.BDClient.read_user(request.Key)
             }
         )
 
@@ -51,10 +53,11 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     def SetUser(self, request, context):
         def make_kwargs():
+            validate_user(request.User)
             self.BDClient.insert_user(request.User)
             return {}
 
-        return SimpleRequest(
+        return DatingServer.SimpleRequestProcessing(
             "SetUser",
             dating_server_pb2.SetUserReply,
             make_kwargs
@@ -68,11 +71,11 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         #     return SetErrorReply(dating_server_pb2.SetUserReply(), str(e))
 
     def SearchAllNeighbours(self, request, context):
-        return SimpleRequest(
+        return DatingServer.SimpleRequestProcessing(
             "SearchAllNeighbours",
             dating_server_pb2.NeighboursReply,
             lambda : {
-                "Keys"=self.BDClient.search_near(request.Geo, request.Distance)
+                "Keys":self.BDClient.search_near(request.Geo, request.Distance)
             }
         )
         # print("SearchAllNeighbours")
@@ -87,11 +90,11 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         #     return SetErrorReply(dating_server_pb2.NeighboursReply(), str(e))
 
     def FindNearest(self, request, context):
-        return SimpleRequest(
+        return DatingServer.SimpleRequestProcessing(
             "FindNearest",
             dating_server_pb2.NearestReply,
             lambda : {
-                "User"=self.BDClient.get_nearest(request.Geo)
+                "User":self.BDClient.get_nearest(request.Geo)
             }
         )
         # print("FindNearest")
@@ -107,18 +110,20 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     def GetReactions(self, request, context):
         def make_kwargs():
-            if request.WhichOneof("Key") is None:
+            field_name = request.WhichOneof("Key")
+            if field_name is None:
                 raise Exception("Empty request")
-            if request.HasField("From"):
-                return {
-                    "Reactions"=self.BDClient.get_reactions_from(request.From)
-                }
-            if request.HasField("To"):
-                return {
-                    "Reactions"=self.BDClient.get_reactions_to(request.To)
-                }
+            reactions = self.BDClient.get_reactions_with(getattr(request, field_name))
+            if field_name == "From":
+                reactions = [react for react in reactions if react.From == request.From]
+            if field_name == "To":
+                reactions = [react for react in reactions if react.To == request.To]
 
-        return SimpleRequest(
+            return {
+                "Reactions":reactions
+            }
+
+        return DatingServer.SimpleRequestProcessing(
             "GetReactions",
             dating_server_pb2.GetReactionsReply,
             make_kwargs
@@ -126,10 +131,11 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     def SetReaction(self, request, context):
         def make_kwargs():
+            validate_set_reaction(request)
             self.BDClient.set_reaction(request.From, request.To, request.Reaction)
             return {}
 
-        return SimpleRequest(
+        return DatingServer.SimpleRequestProcessing(
             "SetReaction",
             dating_server_pb2.SetReactionReply,
             make_kwargs

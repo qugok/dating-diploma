@@ -1,9 +1,7 @@
 from datetime import timedelta
 import generated.user_pb2 as user_pb2
 from config import read_configs
-
-
-
+from misc import UserKeyToKeyString, UserKeyToKeyInteger
 
 # needed for any cluster connection
 from couchbase.auth import PasswordAuthenticator
@@ -13,7 +11,7 @@ from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
                                QueryOptions, UpsertOptions, GetOptions, SearchOptions)
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
-from couchbase.logic.search_queries import GeoDistanceQuery
+from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery
 from couchbase.logic.search import SortGeoDistance
 
 # Update this to your cluster
@@ -30,6 +28,13 @@ from couchbase.logic.search import SortGeoDistance
 #     password,
 # )
 
+def run_with_try_except(func):
+    try:
+        return func()
+    except Exception as e:
+        print(e)
+        raise e
+
 class CouchbaseClient:
     def __init__(self, server = 'couchbase://127.0.0.1', configs = read_configs()):
         auth = PasswordAuthenticator(
@@ -43,32 +48,30 @@ class CouchbaseClient:
         self.user_data_transcoder = RawBinaryTranscoder()
 
         self.geo_data_collection = self.bucket.scope("indexing_jsons").collection("geo_data")
+        self.reactions_collection = self.bucket.scope("indexing_jsons").collection("reactions_data")
 
     def insert_user(self, user: user_pb2.TUser):
-        try:
+        def proc():
             self.__insert_user(user)
             self.__insert_to_external(user)
-        except Exception as e:
-            print(e)
-            raise e
+
+        return run_with_try_except(proc)
+
 
     def __insert_user(self, user: user_pb2.TUser):
         result = self.user_data_collection.upsert(
-            str(user.Key.Hash),
+            UserKeyToKeyString(user.Key),
             user.SerializeToString(),
             UpsertOptions(transcoder=self.user_data_transcoder)
         )
         print(result)
 
     def read_user(self, key: user_pb2.TUserKey):
-        try:
-            return self.__read_user(key)
-        except Exception as e:
-            print(e)
-            raise e
+
+        return run_with_try_except(lambda : self.__read_user(key))
 
     def __read_user(self, key: user_pb2.TUserKey):
-        result = self.user_data_collection.get(str(key.Hash), GetOptions(transcoder=self.user_data_transcoder))
+        result = self.user_data_collection.get(UserKeyToKeyString(key), GetOptions(transcoder=self.user_data_transcoder))
         user = user_pb2.TUser()
         user.ParseFromString(result.content_as[bytes])
         return user
@@ -76,27 +79,25 @@ class CouchbaseClient:
     def __insert_to_external(self, user: user_pb2.TUser):
         if not user.HasField("LastGeo"):
             return
-        def make_geo_format(user: user_pb2.TUser):
-            return {
-                "geo": {
-                    "lat" : user.LastGeo.Latitude,
-                    "lon" : user.LastGeo.Longitude
-                }
-            }
-        try:
+        def proc():
             result = self.geo_data_collection.upsert(
-                str(user.Key.Hash),
-                make_geo_format(user)
+                UserKeyToKeyString(user.Key),
+                {
+                    "geo": {
+                        "lat" : user.LastGeo.Latitude,
+                        "lon" : user.LastGeo.Longitude
+                    }
+                }
             )
             print(result)
-        except Exception as e:
-            print(e)
-            raise e
+
+        return run_with_try_except(proc)
 
     def search_near(self, geo: user_pb2.TGeo, distance = None):
         distance = distance or "100km"
         print("dist:", distance)
-        try:
+
+        def proc():
             result = self.cluster.search_query(
                 "geo_user",
                 GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude)),
@@ -104,27 +105,61 @@ class CouchbaseClient:
             )
             keys = [user_pb2.TUserKey(Hash=int(row.id)) for row in result.rows()]
             return keys
-        except Exception as e:
-            print(e)
-            raise e
+
+        return run_with_try_except(proc)
 
     def get_nearest(self, geo: user_pb2.TGeo):
-        try:
-
+        def proc():
             result = self.cluster.search_query(
                 "geo_user",
                 GeoDistanceQuery("30000km", (geo.Longitude, geo.Latitude)),
                 SearchOptions(
-                    fields = ["geo"],
-                    explain=True,
                     sort = [SortGeoDistance((geo.Longitude, geo.Latitude), "geo")]
                 )
             )
             key = user_pb2.TUserKey(Hash=int(list(result)[0].id))
             return self.__read_user(key)
-        except Exception as e:
-            print(e)
-            raise e
+
+        return run_with_try_except(proc)
+
+    def get_reactions_with(self, key: user_pb2.TUserKey):
+        def proc():
+            result = self.cluster.search_query(
+                "reactions",
+                TermQuery(UserKeyToKeyString(key)),
+                SearchOptions(fields=["fr", "to", "reaction"])
+            )
+
+            reactions = [user_pb2.TReaction(
+                    From=user_pb2.TUserKey(Hash=int(row.fields["fr"])),
+                    To=user_pb2.TUserKey(Hash=int(row.fields["to"])),
+                    ReactionType=row.fields["reaction"]
+                )
+                for row in result
+            ]
+            print("reacts:", reactions)
+            return reactions
+
+        return run_with_try_except(proc)
+
+    def set_reaction(
+        self,
+        fr: user_pb2.TUserKey,
+        to: user_pb2.TUserKey,
+        reaction: user_pb2.TReaction.EReactionType
+    ):
+        def proc():
+            result = self.reactions_collection.upsert(
+                UserKeyToKeyString(fr) + "_" + UserKeyToKeyString(to),
+                {
+                    "fr" : UserKeyToKeyString(fr),
+                    "to" : UserKeyToKeyString(to),
+                    "reaction" : reaction,
+                }
+            )
+            print(result)
+
+        return run_with_try_except(proc)
 
 # Get a reference to our cluster
 # NOTE: For TLS/SSL connection use 'couchbases://<your-ip-address>' instead
@@ -144,25 +179,6 @@ class CouchbaseClient:
 # transcoder = RawBinaryTranscoder()
 
 # upsert document function
-
-# def insert_user(user: user_pb2.TUser):
-#     try:
-#         result = user_data_collection.upsert(str(user.Key.Hash), user.SerializeToString(), UpsertOptions(transcoder=transcoder))
-#         print(result)
-#     except Exception as e:
-#         print(e)
-#         raise e
-
-# def read_user(key: user_pb2.TUserKey):
-#     try:
-#         result = user_data_collection.get(str(key.Hash), GetOptions(transcoder=transcoder))
-#         user = user_pb2.TUser()
-#         user.ParseFromString(result.content_as[bytes])
-#         return user
-#     except Exception as e:
-#         print(e)
-#         raise e
-
 
 # def insert_raw_data(key, data):
 #     print("\nInsert Data: ")

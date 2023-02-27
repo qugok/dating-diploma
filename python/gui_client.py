@@ -64,15 +64,13 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
             self.send_message()
 
     def __fill_request_keys(self, request):
-        if self.UserKeyTo.text:
-            text_format.Parse(self.UserKeyTo.text(), request.To)
-        if self.UserKeyFrom.text:
-            text_format.Parse(self.UserKeyFrom.text(), request.From)
+        request.ToUID = self.UserKeyTo.text()
+        request.FromUID = self.UserKeyFrom.text()
 
     @make_simple_request
     def read_user(self, stub):
         request = dating_server_pb2.GetUserRequest()
-        text_format.Parse(self.UserKeyFrom.text(), request.Key)
+        request.UID = self.UserKeyFrom.text()
 
         return stub.GetUser(request)
 
@@ -94,7 +92,7 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def send_relations(self, stub):
         request = dating_server_pb2.SetReactionRequest()
         self.__fill_request_keys(request)
-        text_format.Parse(self.RequestData.toPlainText(), request.Reaction)
+        request.Reaction = self.RequestData.toPlainText()
 
         return stub.SetReaction(request)
 
@@ -109,8 +107,8 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def send_message(self, stub):
         request = dating_server_pb2.SendMessageRequest()
         message = request.Messages.add()
-        text_format.Parse(self.UserKeyTo.text(), message.ToKey)
-        text_format.Parse(self.UserKeyFrom.text(), message.FromKey)
+        message.ToUID = self.UserKeyTo.text()
+        message.FromUID = self.UserKeyFrom.text()
         message.Text = self.RequestData.toPlainText()
 
         return stub.SendMessage(request)
@@ -173,6 +171,8 @@ if __name__ == '__main__':
 Key {
   Hash: 4567890987
 }
+
+UID: "sgbgbfstgbsrtgbsr"
 Name: "Alex"
 Descripton: "ай, выхади за меня дарагая, лучшый парень ever!"
 LastGeo {
@@ -181,10 +181,10 @@ LastGeo {
 }
 
 
-
 Key {
   Hash: 4563453387
 }
+UID: "asdasdasdadasd"
 Name: "Ally"
 Descripton: "Привет"
 LastGeo {

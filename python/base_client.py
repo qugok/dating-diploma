@@ -1,7 +1,6 @@
 from datetime import timedelta
 import generated.user_pb2 as user_pb2
 from config import read_configs
-from misc import UserKeyToKeyString, UserKeyToKeyInteger, UserKeyFromKeyString
 
 # needed for any cluster connection
 from couchbase.auth import PasswordAuthenticator
@@ -71,18 +70,18 @@ class CouchbaseClient:
     def __insert_user(self, user: user_pb2.TUser):
         #  TODO: разобраться когда нужно использовать upsert, insert, replace а не использовать бездумно как сейчас
         result = self.user_data_collection.upsert(
-            UserKeyToKeyString(user.Key),
+            user.UID,
             user.SerializeToString(),
             UpsertOptions(transcoder=self.user_data_transcoder)
         )
         print(result)
 
-    def read_user(self, key: user_pb2.TUserKey):
+    def read_user(self, UID: str):
 
-        return run_with_try_except(lambda : self.__read_user(key))
+        return run_with_try_except(lambda : self.__read_user(UID))
 
-    def __read_user(self, key: user_pb2.TUserKey):
-        result = self.user_data_collection.get(UserKeyToKeyString(key), GetOptions(transcoder=self.user_data_transcoder))
+    def __read_user(self, UID: str):
+        result = self.user_data_collection.get(UID, GetOptions(transcoder=self.user_data_transcoder))
         user = user_pb2.TUser()
         user.ParseFromString(result.content_as[bytes])
         return user
@@ -92,7 +91,7 @@ class CouchbaseClient:
             return
         def proc():
             result = self.geo_data_collection.upsert(
-                UserKeyToKeyString(user.Key),
+                user.UID,
                 {
                     "geo": {
                         "lat" : user.LastGeo.Latitude,
@@ -114,8 +113,8 @@ class CouchbaseClient:
                 GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude)),
                 SearchOptions(limit=10)
             )
-            keys = [user_pb2.TUserKey(Hash=int(row.id)) for row in result.rows()]
-            return keys
+            UIDs = [row.id for row in result.rows()]
+            return UIDs
 
         return run_with_try_except(proc)
 
@@ -128,24 +127,24 @@ class CouchbaseClient:
                     sort = [SortGeoDistance((geo.Longitude, geo.Latitude), "geo")]
                 )
             )
-            key = user_pb2.TUserKey(Hash=int(list(result)[0].id))
-            return self.__read_user(key)
+            UID = list(result)[0].id
+            return self.__read_user(UID)
 
         return run_with_try_except(proc)
 
-    def get_reactions_with(self, key: user_pb2.TUserKey):
+    def get_reactions_with(self, UID: str):
         def proc():
             #  TODO научиться в SDK искать в конкретном поле а не во всех
             #  TODO переименовать в reactions_index или что-то подобное, чтобы сразу было понятно что поиск идёт по индексу
             result = self.cluster.search_query(
                 "reactions",
-                TermQuery(UserKeyToKeyString(key)),
+                TermQuery(UID),
                 SearchOptions(fields=["fr", "to", "reaction"])
             )
 
             reactions = [user_pb2.TReaction(
-                    From = UserKeyFromKeyString(row.fields["fr"]),
-                    To = UserKeyFromKeyString(row.fields["to"]),
+                    FromUID = row.fields["fr"],
+                    ToUID = row.fields["to"],
                     ReactionType = row.fields["reaction"]
                 )
                 for row in result
@@ -156,16 +155,16 @@ class CouchbaseClient:
 
     def set_reaction(
         self,
-        fr: user_pb2.TUserKey,
-        to: user_pb2.TUserKey,
+        fr: str,
+        to: str,
         reaction: user_pb2.TReaction.EReactionType
     ):
         def proc():
             result = self.reactions_collection.upsert(
-                UserKeyToKeyString(fr) + "_" + UserKeyToKeyString(to),
+                fr + "_" + to,
                 {
-                    "fr" : UserKeyToKeyString(fr),
-                    "to" : UserKeyToKeyString(to),
+                    "fr" : fr,
+                    "to" : to,
                     "reaction" : reaction,
                 }
             )
@@ -197,15 +196,15 @@ class CouchbaseClient:
 
     def read_messages(
         self,
-        fr: user_pb2.TUserKey,
-        to: user_pb2.TUserKey,
+        fr: str,
+        to: str,
     ):
         def proc():
             def read_message(js_dict):
                 print(js_dict)
                 message = user_pb2.TMessage()
-                message.ToKey.Hash = int(js_dict['ToKey.Hash'])
-                message.FromKey.Hash = int(js_dict['FromKey.Hash'])
+                message.ToUID = js_dict['ToUID']
+                message.FromUID = js_dict['FromUID']
                 message.Timestamp = int(js_dict['Timestamp'])
                 message.Text = js_dict['Text']
                 # ParseDict(js_dict, message)
@@ -214,8 +213,8 @@ class CouchbaseClient:
             # message: user_pb2.TMessage
             result = self.cluster.search_query(
                 "messages_index",
-                TermQuery(UserKeyToKeyString(fr)),
-                SearchOptions(fields=['FromKey.Hash', 'ToKey.Hash', 'Timestamp', 'Text'])
+                TermQuery(fr),
+                SearchOptions(fields=['FromUID', 'ToUID', 'Timestamp', 'Text'])
             )
 
             messages = [
@@ -226,7 +225,7 @@ class CouchbaseClient:
             messages = [
                 message
                 for message in messages
-                if message.FromKey == fr and message.ToKey == to
+                if message.FromUID == fr and message.ToUID == to
             ]
             return messages
 
@@ -250,33 +249,3 @@ class CouchbaseClient:
 # transcoder = RawBinaryTranscoder()
 
 # upsert document function
-
-# def insert_raw_data(key, data):
-#     print("\nInsert Data: ")
-#     try:
-#         result = cb_coll_default.upsert(key, data)
-#         print(result)
-#     except Exception as e:
-#         print(e)
-
-
-# def read_raw_data(key):
-#     print("\nRead Data: ")
-#     try:
-#         result = cb_coll_default.get(key)
-#         print(result.content_as[str])
-#         print(result)
-#         return result.content_as[str]
-#     except Exception as e:
-#         print(e)
-
-
-# insert_raw_data("keyabra", "kadabra")
-
-# print("returned: ", read_raw_data("keyabra"))
-
-# upsert_document(airline)
-
-# get_airline_by_key("airline_8091")
-
-# lookup_by_callsign("CBS")

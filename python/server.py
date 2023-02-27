@@ -39,20 +39,9 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
             "GetUser",
             dating_server_pb2.GetUserReply,
             lambda : {
-                "User": self.BDClient.read_user(request.Key)
+                "User": self.BDClient.read_user(request.UID)
             }
         )
-
-        # print("GetUser")
-        # try :
-        #     return SetOkReplyStatus(
-        #         dating_server_pb2.GetUserReply(
-        #             User=self.BDClient.read_user(request.Key)
-        #         )
-        #     )
-        # except Exception as e:
-        #     print("GetUser: got exception ::", e)
-        #     return SetErrorReply(dating_server_pb2.GetUserReply(), str(e))
 
     def SetUser(self, request, context):
         def make_kwargs():
@@ -78,19 +67,9 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
             "SearchAllNeighbours",
             dating_server_pb2.NeighboursReply,
             lambda : {
-                "Keys":self.BDClient.search_near(request.Geo, request.Distance)
+                "UIDs":self.BDClient.search_near(request.Geo, request.Distance)
             }
         )
-        # print("SearchAllNeighbours")
-        # try :
-        #     return SetOkReplyStatus(
-        #         dating_server_pb2.NeighboursReply(
-        #             Keys=self.BDClient.search_near(request.Geo, request.Distance)
-        #         )
-        #     )
-        # except Exception as e:
-        #     print("SearchAllNeighbours: got exception ::", e)
-        #     return SetErrorReply(dating_server_pb2.NeighboursReply(), str(e))
 
     def FindNearest(self, request, context):
         return DatingServer.SimpleRequestProcessing(
@@ -117,10 +96,10 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
             if field_name is None:
                 raise Exception("Empty request")
             reactions = self.BDClient.get_reactions_with(getattr(request, field_name))
-            if field_name == "From":
-                reactions = [react for react in reactions if react.From == request.From]
-            if field_name == "To":
-                reactions = [react for react in reactions if react.To == request.To]
+            if field_name == "FromUID":
+                reactions = [react for react in reactions if react.FromUID == request.FromUID]
+            if field_name == "ToUID":
+                reactions = [react for react in reactions if react.ToUID == request.ToUID]
 
             return {
                 "Reactions":reactions

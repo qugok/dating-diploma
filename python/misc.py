@@ -16,12 +16,3 @@ def SetErrorReply(reply, errorMessage:str):
     reply.Status = misc_pb2.EReplyStatus.ERS_ERROR
     reply.Error.ErrorMessage = errorMessage
     return reply
-
-def UserKeyToKeyString(key: user_pb2.TUserKey):
-    return str(key.Hash)
-
-def UserKeyToKeyInteger(key: user_pb2.TUserKey):
-    return key.Hash
-
-def UserKeyFromKeyString(key: str):
-    return user_pb2.TUserKey(Hash=int(key))

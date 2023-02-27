@@ -1,7 +1,7 @@
 from datetime import timedelta
 import generated.user_pb2 as user_pb2
 from config import read_configs
-from misc import UserKeyToKeyString, UserKeyToKeyInteger
+from misc import UserKeyToKeyString, UserKeyToKeyInteger, UserKeyFromKeyString
 
 # needed for any cluster connection
 from couchbase.auth import PasswordAuthenticator
@@ -150,7 +150,6 @@ class CouchbaseClient:
                 )
                 for row in result
             ]
-            print("reacts:", reactions)
             return reactions
 
         return run_with_try_except(proc)
@@ -170,7 +169,6 @@ class CouchbaseClient:
                     "reaction" : reaction,
                 }
             )
-            print(result)
 
         return run_with_try_except(proc)
 
@@ -181,7 +179,7 @@ class CouchbaseClient:
         def proc():
             for message in messages:
                 self.__store_message(message)
-            print(result)
+
 
         return run_with_try_except(proc)
 
@@ -204,22 +202,32 @@ class CouchbaseClient:
     ):
         def proc():
             def read_message(js_dict):
+                print(js_dict)
                 message = user_pb2.TMessage()
-                ParseDict(js_dict, message)
+                message.ToKey.Hash = int(js_dict['ToKey.Hash'])
+                message.FromKey.Hash = int(js_dict['FromKey.Hash'])
+                message.Timestamp = int(js_dict['Timestamp'])
+                message.Text = js_dict['Text']
+                # ParseDict(js_dict, message)
                 return message
             #  TODO научиться в SDK искать в конкретном поле а не во всех
             # message: user_pb2.TMessage
             result = self.cluster.search_query(
                 "messages_index",
-                TermQuery(UserKeyToKeyString(key)),
-                SearchOptions(fields=user_pb2.TMessage.DESCRIPTOR.fields_by_name.keys())
+                TermQuery(UserKeyToKeyString(fr)),
+                SearchOptions(fields=['FromKey.Hash', 'ToKey.Hash', 'Timestamp', 'Text'])
             )
 
             messages = [
                 read_message(row.fields)
                 for row in result
             ]
-            print("reacts:", messages)
+
+            messages = [
+                message
+                for message in messages
+                if message.FromKey == fr and message.ToKey == to
+            ]
             return messages
 
         return run_with_try_except(proc)

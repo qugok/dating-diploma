@@ -13,6 +13,8 @@ from base_client import CouchbaseClient
 from misc import SetOkReplyStatus, SetErrorReply
 from validation import validate_user, validate_set_reaction
 
+import traceback
+
 class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     def __init__(self):
@@ -29,7 +31,7 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
             )
         except Exception as e:
             print(f"{requestName}: got exception ::", e)
-            return SetErrorReply(reply_class(), str(e))
+            return SetErrorReply(reply_class(), str(e) + str(traceback.format_exc()))
 
 
     def GetUser(self, request, context):

@@ -24,4 +24,4 @@ def UserKeyToKeyInteger(key: user_pb2.TUserKey):
     return key.Hash
 
 def UserKeyFromKeyString(key: str):
-    return user_pb2.TUserKey(int(key))
+    return user_pb2.TUserKey(Hash=int(key))

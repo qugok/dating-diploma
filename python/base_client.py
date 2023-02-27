@@ -14,6 +14,14 @@ import couchbase.search as search
 from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery
 from couchbase.logic.search import SortGeoDistance
 
+
+from google.protobuf.json_format import MessageToJson
+from google.protobuf.json_format import ParseDict
+from google.protobuf.json_format import MessageToDict
+
+import uuid
+import time
+
 # Update this to your cluster
 # private_data = read_configs()
 # username = private_data.Username
@@ -29,6 +37,7 @@ from couchbase.logic.search import SortGeoDistance
 # )
 
 def run_with_try_except(func):
+    #  TODO REFACTORING заменить на нормальный декоратор
     try:
         return func()
     except Exception as e:
@@ -49,6 +58,7 @@ class CouchbaseClient:
 
         self.geo_data_collection = self.bucket.scope("indexing_jsons").collection("geo_data")
         self.reactions_collection = self.bucket.scope("indexing_jsons").collection("reactions_data")
+        self.messages_collection = self.bucket.scope("indexing_jsons").collection("messages_data")
 
     def insert_user(self, user: user_pb2.TUser):
         def proc():
@@ -59,6 +69,7 @@ class CouchbaseClient:
 
 
     def __insert_user(self, user: user_pb2.TUser):
+        #  TODO: разобраться когда нужно использовать upsert, insert, replace а не использовать бездумно как сейчас
         result = self.user_data_collection.upsert(
             UserKeyToKeyString(user.Key),
             user.SerializeToString(),
@@ -124,6 +135,8 @@ class CouchbaseClient:
 
     def get_reactions_with(self, key: user_pb2.TUserKey):
         def proc():
+            #  TODO научиться в SDK искать в конкретном поле а не во всех
+            #  TODO переименовать в reactions_index или что-то подобное, чтобы сразу было понятно что поиск идёт по индексу
             result = self.cluster.search_query(
                 "reactions",
                 TermQuery(UserKeyToKeyString(key)),
@@ -131,9 +144,9 @@ class CouchbaseClient:
             )
 
             reactions = [user_pb2.TReaction(
-                    From=user_pb2.TUserKey(Hash=int(row.fields["fr"])),
-                    To=user_pb2.TUserKey(Hash=int(row.fields["to"])),
-                    ReactionType=row.fields["reaction"]
+                    From = UserKeyFromKeyString(row.fields["fr"]),
+                    To = UserKeyFromKeyString(row.fields["to"]),
+                    ReactionType = row.fields["reaction"]
                 )
                 for row in result
             ]
@@ -158,6 +171,56 @@ class CouchbaseClient:
                 }
             )
             print(result)
+
+        return run_with_try_except(proc)
+
+    def store_messages(
+        self,
+        messages # repeated user_pb2.TMessage,
+    ):
+        def proc():
+            for message in messages:
+                self.__store_message(message)
+            print(result)
+
+        return run_with_try_except(proc)
+
+    def __store_message(
+        self,
+        message: user_pb2.TMessage,
+    ):
+        # TODO убрать заполнение полей из класса для общения с бд в отдельный класс (мб Engine)
+        message.Timestamp = time.time_ns()
+        result = self.messages_collection.upsert(
+            str(uuid.uuid4()),
+            MessageToDict(message)
+        )
+
+
+    def read_messages(
+        self,
+        fr: user_pb2.TUserKey,
+        to: user_pb2.TUserKey,
+    ):
+        def proc():
+            def read_message(js_dict):
+                message = user_pb2.TMessage()
+                ParseDict(js_dict, message)
+                return message
+            #  TODO научиться в SDK искать в конкретном поле а не во всех
+            # message: user_pb2.TMessage
+            result = self.cluster.search_query(
+                "messages_index",
+                TermQuery(UserKeyToKeyString(key)),
+                SearchOptions(fields=user_pb2.TMessage.DESCRIPTOR.fields_by_name.keys())
+            )
+
+            messages = [
+                read_message(row.fields)
+                for row in result
+            ]
+            print("reacts:", messages)
+            return messages
 
         return run_with_try_except(proc)
 

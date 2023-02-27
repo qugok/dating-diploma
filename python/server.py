@@ -20,6 +20,7 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         self.BDClient = CouchbaseClient()
 
     def SimpleRequestProcessing(requestName:str, reply_class, make_kwargs):
+        #  TODO REFACTORING заменить на нормальный декоратор
         print(requestName)
         try :
             kws = make_kwargs()
@@ -138,6 +139,29 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
         return DatingServer.SimpleRequestProcessing(
             "SetReaction",
             dating_server_pb2.SetReactionReply,
+            make_kwargs
+        )
+
+    def SendMessage(self, request, context):
+        def make_kwargs():
+            self.BDClient.store_messages(request.Messages)
+            return {}
+
+        return DatingServer.SimpleRequestProcessing(
+            "SendMessage",
+            dating_server_pb2.SendMessageReply,
+            make_kwargs
+        )
+
+    def GetLastMessages(self, request, context):
+        def make_kwargs():
+            return {
+                "Messages" : self.BDClient.read_messages(request.From, request.To)
+            }
+
+        return DatingServer.SimpleRequestProcessing(
+            "GetLastMessages",
+            dating_server_pb2.GetLastMessagesReply,
             make_kwargs
         )
 

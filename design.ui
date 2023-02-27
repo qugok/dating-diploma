@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>846</width>
+    <width>831</width>
     <height>540</height>
    </rect>
   </property>
@@ -59,7 +59,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,1">
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
@@ -110,60 +110,97 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <layout class="QVBoxLayout" name="verticalLayout_6">
         <item>
-         <widget class="QTextEdit" name="UserDataEdit">
+         <widget class="QLineEdit" name="UserKeyFrom">
           <property name="placeholderText">
-           <string>write user data here</string>
+           <string>key from </string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="writeButton">
-          <property name="text">
-           <string>WriteUser</string>
+         <widget class="QLineEdit" name="UserKeyTo">
+          <property name="placeholderText">
+           <string>key to</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="RequestData">
+          <property name="placeholderText">
+           <string>data</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="SendMessageRadioButton">
+            <property name="text">
+             <string>SendMessage</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QRadioButton" name="GetRelationsRadioButton">
+            <property name="text">
+             <string>GetRelations</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QRadioButton" name="SendRelationRadioButton">
+            <property name="text">
+             <string>SendRelation</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="GetMessagesRadioButton">
+            <property name="text">
+             <string>GetMessages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QRadioButton" name="WriteUserRadioButton">
+            <property name="text">
+             <string>WriteUser</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QRadioButton" name="ReadUserRadioButton">
+            <property name="text">
+             <string>ReadUser</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetDefaultConstraint</enum>
+        </property>
         <item>
-         <widget class="QTextEdit" name="KeyData">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>242</height>
-           </size>
-          </property>
+         <widget class="QTextBrowser" name="ReplyText">
           <property name="placeholderText">
-           <string>write key data here</string>
+           <string>Reply</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QTextBrowser" name="UserData">
-          <property name="placeholderText">
-           <string>here will ne user data</string>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetDefaultConstraint</enum>
           </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <widget class="QPushButton" name="readButton">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-              <horstretch>2</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
+           <widget class="QPushButton" name="MakeRequest">
             <property name="text">
-             <string>ReadUser</string>
-            </property>
-            <property name="flat">
-             <bool>false</bool>
+             <string>Make Request</string>
             </property>
            </widget>
           </item>

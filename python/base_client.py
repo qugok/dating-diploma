@@ -201,7 +201,6 @@ class CouchbaseClient:
     ):
         def proc():
             def read_message(js_dict):
-                print(js_dict)
                 message = user_pb2.TMessage()
                 message.ToUID = js_dict['ToUID']
                 message.FromUID = js_dict['FromUID']

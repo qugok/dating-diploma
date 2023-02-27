@@ -45,6 +45,7 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     def SetUser(self, request, context):
         def make_kwargs():
+            print(request)
             validate_user(request.User)
             self.BDClient.insert_user(request.User)
             return {}
@@ -114,7 +115,7 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
     def SetReaction(self, request, context):
         def make_kwargs():
             validate_set_reaction(request)
-            self.BDClient.set_reaction(request.From, request.To, request.Reaction)
+            self.BDClient.set_reaction(request.FromUID, request.ToUID, request.Reaction)
             return {}
 
         return DatingServer.SimpleRequestProcessing(
@@ -137,7 +138,7 @@ class DatingServer(dating_server_pb2_grpc.DatingServerServicer):
     def GetLastMessages(self, request, context):
         def make_kwargs():
             return {
-                "Messages" : self.BDClient.read_messages(request.From, request.To)
+                "Messages" : self.BDClient.read_messages(request.FromUID, request.ToUID)
             }
 
         return DatingServer.SimpleRequestProcessing(

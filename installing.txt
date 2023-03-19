@@ -12,17 +12,26 @@ git clone git@github.com:qugok/dating-diploma.git --recurse-submodules
 
 sudo apt install python-is-python3
 sudo apt install python3-pip
+sudo apt install daemon
+sudo apt install nginx
 
 sudo python -m pip install grpcio
 sudo python -m pip install grpcio-tools
 sudo python -m pip install couchbase
 sudo python -m pip install uuid
 
+sudo pip install firebase-admin
+
+sudo pip install pip --upgrade
+sudo pip install pyopenssl --upgrade
+
+
+
 
 // useful commands
 pyuic5 design.ui -o python/design.py
 
-
+sudo service nginx restart
 
 
 git pull --recurse-submodules

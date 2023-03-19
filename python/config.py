@@ -3,8 +3,9 @@ import generated.config_pb2 as config_pb2
 from google.protobuf import text_format
 
 # sys.path.append('./generated')
+# dir_path =
 
-def read_configs(path="../private_data.txt.pb"):
+def read_configs(path=os.path.dirname(__file__) + "/../private_data.txt.pb"):
     with open(path, 'r+') as file:
         config = config_pb2.TPrivateData()
         text_format.Parse(''.join(file.readlines()), config)

@@ -1,0 +1,22 @@
+upstream grpcservers {
+    server 127.0.0.1:50051;
+}
+
+upstream test_grpcservers {
+    server 127.0.0.1:50051;
+}
+
+
+server {
+    listen 55555 http2;
+    charset utf-8;
+    access_log /home/diploma/dating-diploma/nginx/access.log;
+
+    location / {
+        grpc_pass grpc://grpcservers;
+    }
+
+    location /server.DatingServer/GetUser {
+        grpc_pass grpc://test_grpcservers;
+    }
+}

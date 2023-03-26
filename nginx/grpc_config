@@ -1,9 +1,9 @@
 upstream grpcservers {
-    server 127.0.0.1:50051;
+    server 127.0.0.1:45050;
 }
 
 upstream test_grpcservers {
-    server 127.0.0.1:50051;
+    server 127.0.0.1:45050;
 }
 
 

@@ -1,6 +1,11 @@
 import generated.user_pb2 as user_pb2
 from lib.couchbase.client import CouchbaseClient
 
+import logging
+from google.protobuf.json_format import MessageToDict
+
+logger = logging.getLogger(__name__)
+
 
 class Manager:
     # TODO добавить валидацию, где необходимо
@@ -13,24 +18,25 @@ class Manager:
         self.couchbase_client.insert_user(user)
 
         if user.HasField("LastGeo"):
-            self.couchbase_client.upsert_to_geo_index(user.LastGeo)
+            self.couchbase_client.upsert_to_geo_index(user.UID, user.LastGeo)
 
     def update_user(self, user_delta: user_pb2.TUser):
         self.couchbase_client.update_user(user_delta)
 
         if user_delta.HasField("LastGeo"):
-            self.couchbase_client.upsert_to_geo_index(user_delta.LastGeo)
+            self.couchbase_client.upsert_to_geo_index(user_delta.UID, user_delta.LastGeo)
 
     def get_user(self, UID: str):
         return self.couchbase_client.get_user(UID)
 
-    def get_users_to_show(self, UID:str, distance:int=None, limit:int=None):
+    def get_users_to_show(self, UID:str, geo: None, distance:int=None, limit:int=None):
         # TODO добавить логики поиска подходящего человека
         user = self.couchbase_client.get_user(UID)
         distance = distance or user.SearchDistanceKm or 10
         limit = limit or 10
-
-        uids = self.couchbase_client.search_near(user.LastGeo, f"{distance}km", limit)
+        geo = geo or user.LastGeo
+        logger.info(f"get_users_to_show for UID: {UID} distance: {distance} limit: {limit} geo: {MessageToDict(geo)}")
+        uids = self.couchbase_client.search_near(geo, f"{distance}km", limit)
         users = [self.couchbase_client.get_user(uid) for uid in uids]
 
         return users

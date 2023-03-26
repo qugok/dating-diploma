@@ -19,6 +19,7 @@ sudo python -m pip install grpcio
 sudo python -m pip install grpcio-tools
 sudo python -m pip install couchbase
 sudo python -m pip install uuid
+sudo python -m pip install boto3
 
 sudo pip install firebase-admin
 

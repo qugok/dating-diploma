@@ -10,7 +10,7 @@ import generated.dating_server_pb2_grpc as dating_server_pb2_grpc
 
 from google.protobuf import text_format
 
-from engine.server import DatingServerEngine
+from media.server import DatingMediaServer
 
 from lib.tools.parse_args import congifure_parser
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def server(port, config):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    dating_server_pb2_grpc.add_DatingServerServicer_to_server(DatingServerEngine(config), server)
+    dating_server_pb2_grpc.add_DatingServerServicer_to_server(DatingMediaServer(config), server)
     server.add_insecure_port('[::]:' + port)
     server.start()
     print("Server started, listening on " + port, flush=True)

@@ -1,6 +1,9 @@
+import logging
+
 from datetime import timedelta
 import generated.user_pb2 as user_pb2
 from lib.config import read_config_from
+from lib.exceptions import UserDontExist
 
 import generated.config_pb2 as config_pb2
 
@@ -9,7 +12,7 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 # needed for options -- cluster, timeout, SQL++ (N1QL) query, etc.
 from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
-                               QueryOptions, UpsertOptions, GetOptions, SearchOptions, InsertOptions, ReplaceOptions)
+                               QueryOptions, UpsertOptions, GetOptions, SearchOptions, InsertOptions, ReplaceOptions, ExistsOptions)
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
 from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery
@@ -21,8 +24,6 @@ from lib.misc import DictToMessage
 
 import uuid
 import time
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -44,29 +45,35 @@ class CouchbaseClient:
         self.messages_collection = self.bucket.scope("indexing_jsons").collection("messages_data")
 
     def __get_user(self, UID: str):
+        logger.debug(f"getting user {UID} from state")
+        if not self.has_user(UID):
+            raise UserDontExist()
         result = self.user_data_collection.get(UID, GetOptions(transcoder=self.user_data_transcoder))
         user = user_pb2.TUser()
         user.ParseFromString(result.content_as[bytes])
         return user, result.cas
+
+    def has_user(self, UID: str):
+        result = self.user_data_collection.exists(UID)
+        return result.exists
 
     def get_user(self, UID: str):
         return self.__get_user(UID)[0]
 
 
     def insert_user(self, user: user_pb2.TUser):
-        result = self.user_data_collection.insert(
+        self.user_data_collection.insert(
             user.UID,
             user.SerializeToString(),
             InsertOptions(transcoder=self.user_data_transcoder)
         )
-        print(result)
 
     def update_user(self, user_delta: user_pb2.TUser):
         """
         если пользователь успевает измениться за время выполнения, то кидает исключение CASMismatchException
         """
 
-        user, old_cas = self.__get_user(user.UID)
+        user, old_cas = self.__get_user(user_delta.UID)
         user.MergeFrom(user_delta)
 
         self.user_data_collection.replace(

@@ -1,17 +1,24 @@
-from lib.request.wrapper import SetErrorReply, SetOkReplyStatus
-from generated.misc_pb2 import TErrorInfo
-import traceback
 import logging
 
-logger = logging.getLogger("__name__")
+from lib.request.wrapper import SetErrorReply, SetOkReplyStatus
+from generated.misc_pb2 import TErrorInfo
+from lib.exceptions import DatingServerException
+import traceback
+from google.protobuf.json_format import MessageToDict
+
+logger = logging.getLogger(__name__)
 
 def process_simple_request(reply_class):
+    def MessageToDictWithoutAuth(message):
+        js_dict:dict= MessageToDict(message)
+        if "Auth" in js_dict:
+            js_dict.pop("Auth")
+        return js_dict
+
     def real_decorator(request_func=None):
         def wrapper(self, request, context):
-            # TODO заменить print на нормальное логгирование РАЗОБРАТЬСЯ С РАБОТОЙ ЛОГГЕРА
-            print(logger, flush=True)
-            logger.debug("preparing", request_func.__name__)
-            logging.info("preparing", request_func.__name__)
+            logger.debug(f"preparing {str(request_func.__name__)}")
+            logging.info(f"preparing {str(request_func.__name__)}")
             try :
                 user_auth_info = self.auth.get_user_auth_info(request.Auth)
                 if not self.auth.authorize_user(user_auth_info, request_func.__name__, request):
@@ -21,7 +28,7 @@ def process_simple_request(reply_class):
                         TErrorInfo.EET_AUTHORIZATION
                     )
 
-                logger.debug("authorixed as ", user_auth_info.uid)
+                logger.debug(f"authorixed as {user_auth_info.uid}")
             except Exception as e:
                 return SetErrorReply(
                     reply_class(),
@@ -29,14 +36,20 @@ def process_simple_request(reply_class):
                     TErrorInfo.EET_AUTHENTIFICATION
                 )
 
-            try :
-                logger.debug("processing", request_func.__name__)
+            try:
+                logger.debug(f"Processiong {request_func.__name__} request: {MessageToDictWithoutAuth(request)}")
                 kws = request_func(self, request, context, user_auth_info)
                 return SetOkReplyStatus(
                     reply_class(**kws)
                 )
+            except DatingServerException as e:
+                return SetErrorReply(
+                    reply_class(),
+                    str(e),
+                    TErrorInfo.EET_USER_DONT_REGISTERED
+                )
             except Exception as e:
-                logger.error(f"{request_func.__name__}: got exception ::", e)
+                logger.error(f"{request_func.__name__}: got exception :: {e}")
                 return SetErrorReply(
                     reply_class(),
                     str(e) + str(traceback.format_exc()),

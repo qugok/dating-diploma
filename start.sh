@@ -33,7 +33,7 @@ function runApp {
         --port $port
 }
 
-# runApp media 45000
+runApp media 45000
 runApp engine 45050
 
 # daemon  --name="dating_server" \

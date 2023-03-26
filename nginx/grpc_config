@@ -1,8 +1,8 @@
-upstream grpcservers {
-    server 127.0.0.1:45050;
+upstream media {
+    server 127.0.0.1:45000;
 }
 
-upstream test_grpcservers {
+upstream engine {
     server 127.0.0.1:45050;
 }
 
@@ -13,10 +13,14 @@ server {
     access_log /home/diploma/dating-diploma/nginx/access.log;
 
     location / {
-        grpc_pass grpc://grpcservers;
+        grpc_pass grpc://engine;
     }
 
-    location /server.DatingServer/GetUser {
-        grpc_pass grpc://test_grpcservers;
+    location /server.DatingServer/UploadMedia {
+        grpc_pass grpc://media;
+    }
+
+    location /server.DatingServer/DownloadMedia {
+        grpc_pass grpc://media;
     }
 }

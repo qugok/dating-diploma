@@ -42,7 +42,7 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     @process_simple_request(dating_server_pb2.SearchUsersReply)
     def SearchUsers(self, request :dating_server_pb2.SearchUsersRequest, context, user_auth_info):
-        logger.info(f"Processiong SearchUsers with UID: {request.UID} Geo: {request.Geo.Latitude}, {request.Geo.Longitude} Dist: {request.Distance}")
+        logger.info(f"Processiong SearchUsers with UID: {request.UID} Geo: {request.Geo} Dist: {request.Distance}")
         return {"Users":self.manager.get_users_to_show(request.UID, request.Geo, distance=request.Distance)}
 
     @process_simple_request(dating_server_pb2.GetReactionsReply)
@@ -50,7 +50,6 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
         field_name = request.WhichOneof("Key")
         if field_name is None:
             raise Exception("Empty request")
-        logger.info(f"Processiong GetReactions with {field_name}: {getattr(request, field_name)}")
 
         if field_name == "FromUID":
             reactions = self.manager.get_reactions_from(request.FromUID)

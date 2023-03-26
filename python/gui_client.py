@@ -73,6 +73,11 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         elif self.SearchUsersRadioButton.isChecked():
             self.search_users()
 
+        elif self.UploadMediaRadioButton.isChecked():
+            self.upload_media()
+        elif self.DownloadMediaRadioButton.isChecked():
+            self.download_media()
+
     def __fill_request_keys(self, request):
         request.ToUID = self.UserKeyTo.text()
         request.FromUID = self.UserKeyFrom.text()
@@ -128,6 +133,18 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         request.UID = self.UserKeyFrom.text()
 
         return stub.SearchUsers(request, timeout=timeout)
+
+    @make_simple_request(dating_server_pb2.UploadMediaRequest)
+    def upload_media(self, request, stub, timeout):
+        text_format.Parse(self.RequestData.toPlainText(), request.Media)
+
+        return stub.UploadMedia(request, timeout=timeout)
+
+    @make_simple_request(dating_server_pb2.DownloadMediaRequest)
+    def download_media(self, request, stub, timeout):
+        text_format.Parse(self.RequestData.toPlainText(), request.Media)
+
+        return stub.DownloadMedia(request, timeout=timeout)
 
 def run():
     print("Starting Add ... ")
@@ -187,5 +204,34 @@ eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3OWVkMTU1OTdhYjM1Zjc4MjljZTc0NDMwN2I3OTNiN2ViZWIy
 ERT_UNSET
 ERT_LIKE
 ERT_DISLIKE
+
+
+Type: EMT_PHOTO
+LoadType: ELT_FULL
+Data: "qwertyuiopoihgfdfghjkl"
+
+
+
+Type: EMT_PHOTO
+Path: "photo/23707c72-f333-454f-a9eb-9c65658c8eee"
+
+
+
+
+message TLoadingMedia {
+  enum ELoadType {
+    ELT_UNKNOWN = 0;
+    ELT_FULL = 1;
+    ELT_BY_PART = 2;
+  }
+
+  EMediaType Type = 1;
+  ELoadType LoadType = 2;
+  string Path = 3;
+  bytes Data = 4;
+  uint32 PartNumber = 5;
+}
+
+
 
 """

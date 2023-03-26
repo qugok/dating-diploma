@@ -10,7 +10,7 @@ import generated.dating_server_pb2_grpc as dating_server_pb2_grpc
 
 from google.protobuf import text_format
 
-from media.server import DatingMediaServer
+from server import DatingMediaServer
 
 from lib.tools.parse_args import congifure_parser
 

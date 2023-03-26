@@ -13,12 +13,13 @@ def get_path_prefix(m_type: user_pb2.EMediaType):
     if m_type == user_pb2.EMT_AUDIO:
         return "audio"
     elif m_type == user_pb2.EMT_PHOTO:
-        return "audio"
+        return "photo"
     elif m_type == user_pb2.EMT_VIDEO:
-        return "audio"
+        return "video"
 
 class MediaManager:
     # TODO добавить валидацию, где необходимо
+    # TODO реально важно добавить валидацию
     def __init__(self, config_path):
         # TODO добавить отдельный конфиг для менеджера
         self.client = YandexObjectStorageClient()
@@ -36,7 +37,7 @@ class MediaManager:
 
     def download_media(self, media:user_pb2.TMetaMedia):
         prefix = get_path_prefix(media.Type)
-        if not media.Path.startswith(prefix):
+        if not media.Path or not media.Path.startswith(prefix):
             raise WrongRequest(f"media type dont match to path prefix")
 
         data = self.client.read_media(media.Path)

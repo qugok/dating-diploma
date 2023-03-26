@@ -4,7 +4,7 @@ import generated.config_pb2 as config_pb2
 
 from lib.tools.decorators import process_simple_request
 from lib.auth import FirebaseAuth
-from media.media import MediaManager
+from media import MediaManager
 
 import logging
 

@@ -16,6 +16,7 @@ from google.protobuf import text_format
 import design
 
 def make_simple_request(request_class):
+    timeout = 5
     def real_decorator(request_func):
         def wrapper(self):
             self.status.setText(f"Preparing {request_func.__name__} Request")
@@ -26,7 +27,7 @@ def make_simple_request(request_class):
                     request = request_class()
                     if token:
                         request.Auth.Token = token
-                    response = request_func(self, request, stub)
+                    response = request_func(self, request, stub, timeout)
 
                 self.ReplyText.setText(text_format.MessageToString(response, True))
                 if not response.HasField("Error"):
@@ -77,56 +78,56 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         request.FromUID = self.UserKeyFrom.text()
 
     @make_simple_request(dating_server_pb2.GetUserRequest)
-    def read_user(self, request, stub):
+    def read_user(self, request, stub, timeout):
         request.UID = self.UserKeyFrom.text()
 
-        return stub.GetUser(request)
+        return stub.GetUser(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.RegisterUserRequest)
-    def register_user(self, request, stub):
+    def register_user(self, request, stub, timeout):
         text_format.Parse(self.RequestData.toPlainText(), request.User)
 
-        return stub.RegisterUser(request)
+        return stub.RegisterUser(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.UpdateUserRequest)
-    def update_user(self, request, stub):
-        text_format.Parse(self.RequestData.toPlainText(), request.User)
+    def update_user(self, request, stub, timeout):
+        text_format.Parse(self.RequestData.toPlainText(), request.UserDelta)
 
-        return stub.UpdateUser(request)
+        return stub.UpdateUser(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.GetReactionsRequest)
-    def get_relations(self, request, stub):
+    def get_relations(self, request, stub, timeout):
         self.__fill_request_keys(request)
 
-        return stub.GetReactions(request)
+        return stub.GetReactions(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.SetReactionRequest)
-    def send_relations(self, request, stub):
+    def send_relations(self, request, stub, timeout):
         self.__fill_request_keys(request)
         request.Reaction = self.RequestData.toPlainText()
 
-        return stub.SetReaction(request)
+        return stub.SetReaction(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.GetLastMessagesRequest)
-    def get_messages(self, request, stub):
+    def get_messages(self, request, stub, timeout):
         self.__fill_request_keys(request)
 
-        return stub.GetLastMessages(request)
+        return stub.GetLastMessages(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.SendMessageRequest)
-    def send_message(self, request, stub):
+    def send_message(self, request, stub, timeout):
         message = request.Messages.add()
         message.ToUID = self.UserKeyTo.text()
         message.FromUID = self.UserKeyFrom.text()
         message.Text = self.RequestData.toPlainText()
 
-        return stub.SendMessage(request)
+        return stub.SendMessage(request, timeout=timeout)
 
     @make_simple_request(dating_server_pb2.SearchUsersRequest)
-    def search_users(self, request, stub):
+    def search_users(self, request, stub, timeout):
         request.UID = self.UserKeyFrom.text()
 
-        return stub.SearchUsers(request)
+        return stub.SearchUsers(request, timeout=timeout)
 
 def run():
     print("Starting Add ... ")
@@ -152,7 +153,7 @@ if __name__ == '__main__':
 
 UID: "sgbgbfstgbsrtgbsr"
 Name: "Alex"
-Descripton: "ай, выхади за меня дарагая, лучшый парень ever!"
+Description: "ай, выхади за меня дарагая, лучшый парень ever!"
 LastGeo {
   Latitude: 50.000000
   Longitude: 1.000000
@@ -160,7 +161,7 @@ LastGeo {
 
 UID: "asdasdasdadasd"
 Name: "Ally"
-Descripton: "Привет"
+Description: "Привет"
 LastGeo {
   Latitude: 50.962057
   Longitude: 1.954764
@@ -170,7 +171,7 @@ LastGeo {
 
 UID: "GQMCVmgBP7YNFNU9zpagdSV4CCo2"
 Name: "Authorized User"
-Descripton: "Привет, я пользователь, у которого есть настоящий токен аутентификации"
+Description: "Привет, я пользователь, у которого есть настоящий токен аутентификации"
 LastGeo {
   Latitude: 50.000000
   Longitude: 1.000000
@@ -178,10 +179,10 @@ LastGeo {
 SearchDistanceKm: 25
 
 Auth {
-    Token: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOTczZWUwZTE2ZjdlZWY0ZjkyMWQ1MGRjNjFkNzBiMmVmZWZjMTkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc29uZGVyLWRhdGluZy1hcHAiLCJhdWQiOiJzb25kZXItZGF0aW5nLWFwcCIsImF1dGhfdGltZSI6MTY3NzQzMjMwMiwidXNlcl9pZCI6IkdRTUNWbWdCUDdZTkZOVTl6cGFnZFNWNENDbzIiLCJzdWIiOiJHUU1DVm1nQlA3WU5GTlU5enBhZ2RTVjRDQ28yIiwiaWF0IjoxNjc5MjM0Mzg0LCJleHAiOjE2NzkyMzc5ODQsInBob25lX251bWJlciI6Iis3OTE2MDg3MjEzMSIsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsicGhvbmUiOlsiKzc5MTYwODcyMTMxIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGhvbmUifX0.hupKx9G0QqNaT7tCw5CpALVvKkO6vI1T4WP5AlaHWIejzN1fihXQpyhtdZB1iRTLHB2c1aKxpdpY_TIS5p51yp5rYzYNGL4h-nzOcAHPkbKnaS19jUnJTyL4dks9r1jGNVi5jSzIK6XMHLtbh-sm3bbbsk2ukkKLMFkMSg_lT08bwfAKpAFJiOY998CvkmR6x4P25xHg4X6KmcFFV11e7GqVDoDydDatJvBLgxxpkTxL1Iknhf4Qwm8YzyHvYBr4hzQgcu9V2xJz8j5Tb7dZLFehPEJbflgySYNtQHbwhP0jiNS_RJMJBssZJ61Pr1LoAtcxpExx4dSGHCNS5Ex0PA"
+    Token: "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3OWVkMTU1OTdhYjM1Zjc4MjljZTc0NDMwN2I3OTNiN2ViZWIyZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc29uZGVyLWRhdGluZy1hcHAiLCJhdWQiOiJzb25kZXItZGF0aW5nLWFwcCIsImF1dGhfdGltZSI6MTY3NzQzMjMwMiwidXNlcl9pZCI6IkdRTUNWbWdCUDdZTkZOVTl6cGFnZFNWNENDbzIiLCJzdWIiOiJHUU1DVm1nQlA3WU5GTlU5enBhZ2RTVjRDQ28yIiwiaWF0IjoxNjc5ODI3NjU4LCJleHAiOjE2Nzk4MzEyNTgsInBob25lX251bWJlciI6Iis3OTE2MDg3MjEzMSIsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsicGhvbmUiOlsiKzc5MTYwODcyMTMxIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGhvbmUifX0.MfcUnUufc6-NdW_n2ESRRd7tqmtnoELRysB-rJvPQH-ZlFsYxVVTkfJmbQpEd9FfLE8NmLF4z8N8HCfAjfe4lY17lh_8kRRCe0Yo4ZJYqrlCedGYjW-GmeEJqXgFjaOGgUw1qWf2iMGMBloYjrnUgzz-aRWi2XnkRPEmX7wKwbOme9KbqnsmLP26WU5yFUgAsIvRPUnrIE_3moYO5AFlGj548p7qRmOABC_8sYNJcBBasXyWr2E5wzoXjS5LWKTfuOgpcJYSDMS-LwREGyrjUsHBUvkW8vUrQFzriiUGnAvUwlq4gEIfF8uvFaZj2lqlfwbXUXBkLM2bPEpR8KMl1A"
 }
 
-eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOTczZWUwZTE2ZjdlZWY0ZjkyMWQ1MGRjNjFkNzBiMmVmZWZjMTkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc29uZGVyLWRhdGluZy1hcHAiLCJhdWQiOiJzb25kZXItZGF0aW5nLWFwcCIsImF1dGhfdGltZSI6MTY3NzQzMjMwMiwidXNlcl9pZCI6IkdRTUNWbWdCUDdZTkZOVTl6cGFnZFNWNENDbzIiLCJzdWIiOiJHUU1DVm1nQlA3WU5GTlU5enBhZ2RTVjRDQ28yIiwiaWF0IjoxNjc5MjM0Mzg0LCJleHAiOjE2NzkyMzc5ODQsInBob25lX251bWJlciI6Iis3OTE2MDg3MjEzMSIsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsicGhvbmUiOlsiKzc5MTYwODcyMTMxIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGhvbmUifX0.hupKx9G0QqNaT7tCw5CpALVvKkO6vI1T4WP5AlaHWIejzN1fihXQpyhtdZB1iRTLHB2c1aKxpdpY_TIS5p51yp5rYzYNGL4h-nzOcAHPkbKnaS19jUnJTyL4dks9r1jGNVi5jSzIK6XMHLtbh-sm3bbbsk2ukkKLMFkMSg_lT08bwfAKpAFJiOY998CvkmR6x4P25xHg4X6KmcFFV11e7GqVDoDydDatJvBLgxxpkTxL1Iknhf4Qwm8YzyHvYBr4hzQgcu9V2xJz8j5Tb7dZLFehPEJbflgySYNtQHbwhP0jiNS_RJMJBssZJ61Pr1LoAtcxpExx4dSGHCNS5Ex0PA
+eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3OWVkMTU1OTdhYjM1Zjc4MjljZTc0NDMwN2I3OTNiN2ViZWIyZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vc29uZGVyLWRhdGluZy1hcHAiLCJhdWQiOiJzb25kZXItZGF0aW5nLWFwcCIsImF1dGhfdGltZSI6MTY3NzQzMjMwMiwidXNlcl9pZCI6IkdRTUNWbWdCUDdZTkZOVTl6cGFnZFNWNENDbzIiLCJzdWIiOiJHUU1DVm1nQlA3WU5GTlU5enBhZ2RTVjRDQ28yIiwiaWF0IjoxNjc5ODI3NjU4LCJleHAiOjE2Nzk4MzEyNTgsInBob25lX251bWJlciI6Iis3OTE2MDg3MjEzMSIsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsicGhvbmUiOlsiKzc5MTYwODcyMTMxIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGhvbmUifX0.MfcUnUufc6-NdW_n2ESRRd7tqmtnoELRysB-rJvPQH-ZlFsYxVVTkfJmbQpEd9FfLE8NmLF4z8N8HCfAjfe4lY17lh_8kRRCe0Yo4ZJYqrlCedGYjW-GmeEJqXgFjaOGgUw1qWf2iMGMBloYjrnUgzz-aRWi2XnkRPEmX7wKwbOme9KbqnsmLP26WU5yFUgAsIvRPUnrIE_3moYO5AFlGj548p7qRmOABC_8sYNJcBBasXyWr2E5wzoXjS5LWKTfuOgpcJYSDMS-LwREGyrjUsHBUvkW8vUrQFzriiUGnAvUwlq4gEIfF8uvFaZj2lqlfwbXUXBkLM2bPEpR8KMl1A
 
 ERT_UNSET
 ERT_LIKE

@@ -1,9 +1,6 @@
 
 
 # import grpc
-from validation import validate_user
-from validation import validate_set_reaction
-
 import generated.dating_server_pb2 as dating_server_pb2
 import generated.dating_server_pb2_grpc as dating_server_pb2_grpc
 import generated.config_pb2 as config_pb2
@@ -39,8 +36,8 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     @process_simple_request(dating_server_pb2.UpdateUserReply)
     def UpdateUser(self, request, context, user_auth_info):
-        logger.info(f"Processiong UpdateUser with UID: {request.User.UID}")
-        self.manager.update_user(request.User)
+        logger.info(f"Processiong UpdateUser with UID: {request.UserDelta.UID}")
+        self.manager.update_user(request.UserDelta)
         return {}
 
     @process_simple_request(dating_server_pb2.SearchUsersReply)

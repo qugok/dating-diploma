@@ -59,56 +59,7 @@
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1,1">
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <item>
-         <widget class="QTextEdit" name="GeoInfo">
-          <property name="placeholderText">
-           <string>write geo here </string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QTextBrowser" name="UsersKeys">
-          <property name="placeholderText">
-           <string>here will be key list</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QCheckBox" name="NearestUser">
-            <property name="font">
-             <font>
-              <pointsize>9</pointsize>
-              <italic>false</italic>
-              <kerning>true</kerning>
-             </font>
-            </property>
-            <property name="text">
-             <string>Nearest user</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="SearchUsers">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-              <horstretch>1</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Search Near</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,1">
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_6">
         <item>
@@ -126,6 +77,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QLineEdit" name="AuthToken">
+          <property name="placeholderText">
+           <string>auth token</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QTextEdit" name="RequestData">
           <property name="placeholderText">
            <string>data</string>
@@ -134,45 +92,73 @@
         </item>
         <item>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="1">
-           <widget class="QRadioButton" name="SendMessageRadioButton">
-            <property name="text">
-             <string>SendMessage</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
+          <item row="1" column="0" colspan="2">
            <widget class="QRadioButton" name="GetRelationsRadioButton">
             <property name="text">
              <string>GetRelations</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QRadioButton" name="SendRelationRadioButton">
-            <property name="text">
-             <string>SendRelation</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
+          <item row="2" column="0" colspan="2">
            <widget class="QRadioButton" name="GetMessagesRadioButton">
             <property name="text">
              <string>GetMessages</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QRadioButton" name="WriteUserRadioButton">
+          <item row="1" column="2" colspan="2">
+           <widget class="QRadioButton" name="SendRelationRadioButton">
             <property name="text">
-             <string>WriteUser</string>
+             <string>SendRelation</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="2" column="2" colspan="2">
+           <widget class="QRadioButton" name="SendMessageRadioButton">
+            <property name="text">
+             <string>SendMessage</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QRadioButton" name="ReadUserRadioButton">
             <property name="text">
              <string>ReadUser</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2" colspan="2">
+           <widget class="QRadioButton" name="UpdateUserRadioButton">
+            <property name="text">
+             <string>UpdateUser</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2" colspan="2">
+           <widget class="QRadioButton" name="RegisterUserRadioButton">
+            <property name="text">
+             <string>RegisterUser</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QRadioButton" name="SearchUsersRadioButton">
+            <property name="text">
+             <string>SearchUsers</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QRadioButton" name="DownloadMediaRadioButton">
+            <property name="text">
+             <string>DownloadMedia</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QRadioButton" name="UploadMediaRadioButton">
+            <property name="text">
+             <string>UploadMedia</string>
             </property>
            </widget>
           </item>

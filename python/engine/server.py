@@ -6,7 +6,8 @@ import generated.dating_server_pb2_grpc as dating_server_pb2_grpc
 import generated.config_pb2 as config_pb2
 
 from lib.tools.decorators import process_simple_request
-from lib.auth import FirebaseAuth
+from lib.auth import FirebaseApp
+from lib.validate_request import Validator
 from engine.manager import Manager
 
 import logging
@@ -18,7 +19,8 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     def __init__(self, config:config_pb2.TServerConfig):
         super().__init__()
-        self.auth = FirebaseAuth(config.Auth)
+        self.auth = FirebaseApp(config.Auth)
+        self.validator = Validator()
 
         self.logger = logger
         self.manager = Manager(config.PrivateDataPath)

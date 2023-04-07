@@ -1,5 +1,5 @@
 Auth {
-    Enabled: true
+    Enabled: false
 }
 
 PrivateDataPath: "conf/private_data.pb.txt"

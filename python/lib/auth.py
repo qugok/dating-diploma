@@ -5,33 +5,54 @@ import generated.config_pb2 as config_pb2
 
 # app = firebase_admin.initialize_app()
 
+from firebase_admin import messaging
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserAuthInfo() :
     def __init__(self, decoded_token):
         self.uid = decoded_token['uid']
         # TODO etc
 
-class FirebaseAuth():
-    # TODO обобщить до FirebaseApp
+class FirebaseApp():
     # TODO разделить авторизацию и аутентификацию
 
     def __init__(self, config:config_pb2.TAuthConfig):
         # self.enabled = config.Enabled
         self.app = firebase_admin.initialize_app()
         self.enabled = False
-        pass
+        self.logged_in_users = {}
+
+    def authenticate_user(self, auth):
+        if not self.enabled:
+            return UserAuthInfo({'uid':''})
+
+        if not auth or not auth.Token:
+            return None
+        user_info = self.get_user_auth_info(auth)
+        if user_info.uid not in self.logged_in_users:
+            self.logged_in_users[user_info.uid] = (auth.Token, user_info)
+        return self.logged_in_users[user_info.uid]
 
     def get_user_auth_info(self, auth: TAuth):
-        if not auth or not auth.Token:
-            fake_decoded_token = {'uid':None}
-            return UserAuthInfo(fake_decoded_token)
-
         decoded_token = firebase_auth.verify_id_token(auth.Token)
-        print("got token while verification:")
-        print(decoded_token)
+        logger.debug(f"got token while verification: {decoded_token}")
         return UserAuthInfo(decoded_token)
 
     def authorize_user(self, user_auth_info: UserAuthInfo, request_name, request):
         if not self.enabled:
             return True
 
+    def send_user_push(self, UID:str, title, body):
+        if UID not in self.logged_in_users:
+            return False
+        token, _ = self.logged_in_users[UID]
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body
+            ),
+            token=token
+        )
+        messaging.send(message)

@@ -28,14 +28,15 @@ import time
 logger = logging.getLogger(__name__)
 
 class CouchbaseClient:
-    def __init__(self, config_path, server = 'couchbase://127.0.0.1'):
+    def __init__(self, config_path):
         configs = read_config_from(config_pb2.TPrivateData, config_path)
         auth = PasswordAuthenticator(
-            configs.Username,
-            configs.Password,
+            configs.CouchbaseUsername,
+            configs.CouchbasePassword,
         )
-        self.cluster = Cluster(server, ClusterOptions(auth))
-        self.cluster.wait_until_ready(timedelta(seconds=5))
+
+        self.cluster = Cluster(configs.CouchbaseAddress, ClusterOptions(auth))
+        self.cluster.wait_until_ready(timedelta(seconds=30))
         self.bucket = self.cluster.bucket("dating-data")
         self.user_data_collection = self.bucket.scope("protobufs").collection("user_data")
         self.user_data_transcoder = RawBinaryTranscoder()
@@ -95,7 +96,7 @@ class CouchbaseClient:
 
     def search_near(self, geo: user_pb2.TGeo, distance, limit):
         result = self.cluster.search_query(
-            "geo_user",
+            "geo_index",
             GeoDistanceQuery(distance, (geo.Longitude, geo.Latitude)),
             SearchOptions(
                 limit=limit,
@@ -110,7 +111,7 @@ class CouchbaseClient:
         #  TODO переименовать в reactions_index или что-то подобное, чтобы сразу было понятно что поиск идёт по индексу
         print(list(user_pb2.TReaction.DESCRIPTOR.fields_by_name), flush=True)
         result = self.cluster.search_query(
-            "reactions",
+            "reactions_index",
             TermQuery(UID),
             SearchOptions(fields=list(user_pb2.TReaction.DESCRIPTOR.fields_by_name))
         )

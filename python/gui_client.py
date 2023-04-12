@@ -47,8 +47,10 @@ class ClientApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         super().__init__()
         self.setupUi(self)  # Это нужно для инициализации нашего дизайна
 
-        # self.server_address = "51.250.13.10:50051"
-        self.server_address = "51.250.13.10:55555"
+        # self.server_address = "158.160.59.42:20000"
+        # self.server_address = "grpc.dating-diploma.qugok.ru:20000"
+        self.server_address = "130.193.51.233:20000"
+        # self.server_address = "51.250.13.10:55555"
         self.MakeRequest.clicked.connect(self.request)
         self.status.setText("приветики")
 
@@ -175,6 +177,7 @@ LastGeo {
   Latitude: 50.000000
   Longitude: 1.000000
 }
+SearchDistanceKm: 25
 
 UID: "asdasdasdadasd"
 Name: "Ally"
@@ -183,6 +186,7 @@ LastGeo {
   Latitude: 50.962057
   Longitude: 1.954764
 }
+SearchDistanceKm: 25
 
 
 

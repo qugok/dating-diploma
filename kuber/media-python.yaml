@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-media
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-media-pod
+  template:
+    metadata:
+      labels:
+        app: python-media-pod
+    spec:
+      containers:
+      - name: python-media
+        image: cr.yandex/<REGISTRY_ID>/python-media
+        ports:
+        - containerPort: 20000
+        resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "500Mi"
+              cpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: python-media-service
+  name: python-media-service
+spec:
+  selector:
+    app: python-media-pod
+  type: NodePort
+  ports:
+    - name: grpc
+      port: 20000
+      protocol: TCP

@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  grpc_config: |
+    upstream media {
+        server <ip>:20000;
+    }
+    upstream engine {
+        server <ip>:20000;
+    }
+    server {
+      listen 20000 http2;
+      charset utf-8;
+
+      location / {
+          grpc_pass grpc://engine;
+      }
+
+      location /server.DatingServer/UploadMedia {
+          grpc_pass grpc://media;
+      }
+
+      location /server.DatingServer/DownloadMedia {
+          grpc_pass grpc://media;
+      }
+    }
+    server {
+      listen 80 http2;
+      charset utf-8;
+
+      location / {
+          grpc_pass grpc://engine;
+      }
+
+      location /server.DatingServer/UploadMedia {
+          grpc_pass grpc://media;
+      }
+
+      location /server.DatingServer/DownloadMedia {
+          grpc_pass grpc://media;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-pod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-pod
+  template:
+    metadata:
+      labels:
+        app: nginx-pod
+    spec:
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: dating-diploma-k8s-secret
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/grpc_configg.conf
+          subPath: grpc_config
+        - mountPath: /etc/nginx/ssl
+          name: secret-volume
+        ports:
+        - containerPort: 20000
+        resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "500Mi"
+              cpu: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx-service
+  name: nginx-service
+spec:
+  selector:
+    app: nginx-pod
+  type: LoadBalancer
+  loadBalancerIP: <balancer ip>
+  ports:
+    - name: grpc
+      port: 20000
+      protocol: TCP
+

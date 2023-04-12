@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-http-balancer
+  namespace: default
+  annotations:
+    ingress.alb.yc.io/group-name: qugok-balancer
+    ingress.alb.yc.io/subnets: e9bkr6vt9tlpbbv76vk1
+    ingress.alb.yc.io/external-ipv4-address: auto
+    ingress.alb.yc.io/protocol: http
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - <host>
+      secretName: <secret>
+  rules:
+    - host:  <host>
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: couchbase-master-service
+                port:
+                  number: 8091

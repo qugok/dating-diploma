@@ -25,7 +25,7 @@ class Validator:
                 request.Media.Data
 
     def validate_GetUser(self, request:dating_server_pb2.GetUserRequest):
-        return request.UID is not None
+        return not not request.UID
 
     def validate_RegisterUser(self, request:dating_server_pb2.RegisterUserRequest):
         if not request.HasField("User"):

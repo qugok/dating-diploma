@@ -4,4 +4,6 @@ generated
 __pycache__
 access.log
 run/*
+aws
 *sonder-dating-app-firebase-adminsdk-*.json
+dating-diploma.code-workspace

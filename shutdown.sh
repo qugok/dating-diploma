@@ -9,5 +9,5 @@ function StopApp {
     kill `cat $RUN_DIR/$app_name.pid`
 }
 
-# StopApp media
+StopApp media
 StopApp engine

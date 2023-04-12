@@ -36,3 +36,16 @@ sudo service nginx restart
 
 
 git pull --recurse-submodules
+
+
+sudo docker build -t python-dating-engine .
+sudo docker build -t cr.yandex/crpmht6s4vkhnj1pe05c/python-engine .
+sudo docker push cr.yandex/crpmht6s4vkhnj1pe05c/python-engine
+
+
+
+sudo docker run -p 20000:20000 python-dating-engine
+
+
+sudo docker run --init --ulimit core=-1 --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine
+sudo docker run -it --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine bash

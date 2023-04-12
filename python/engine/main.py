@@ -1,6 +1,8 @@
 import logging
 import time
 
+import sys
+
 from lib.config import read_config_from
 
 from concurrent import futures
@@ -29,11 +31,8 @@ if __name__ == '__main__':
     parser = congifure_parser()
 
     args = parser.parse_args()
-    print(time.localtime(), args.config_folder, args.log_path, args.port, flush=True)
 
     config = read_config_from(config_pb2.TServerConfig, args.config_folder + "/config.pb.txt")
-
-    print(text_format.MessageToString(config, True))
 
     logging.basicConfig(filename=args.log_path, level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', force=True)
 

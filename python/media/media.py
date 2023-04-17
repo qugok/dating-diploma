@@ -7,7 +7,7 @@ import uuid
 import logging
 from google.protobuf.json_format import MessageToDict
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("media")
 
 def get_path_prefix(m_type: user_pb2.EMediaType):
     if m_type == user_pb2.EMT_AUDIO:
@@ -20,7 +20,7 @@ def get_path_prefix(m_type: user_pb2.EMediaType):
 class MediaManager:
     # TODO добавить валидацию, где необходимо
     # TODO реально важно добавить валидацию
-    def __init__(self, config_path):
+    def __init__(self):
         # TODO добавить отдельный конфиг для менеджера
         self.client = YandexObjectStorageClient()
 

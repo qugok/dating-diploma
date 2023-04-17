@@ -23,7 +23,7 @@ ADD Makefile Makefile
 
 RUN make
 
-ADD python/engine/* python/engine/
+ADD python/processor/* python/processor/
 ADD python/lib python/lib
 ADD conf conf
 
@@ -34,6 +34,6 @@ RUN chmod 655 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt
 ENV GOOGLE_APPLICATION_CREDENTIALS="$/conf/sonder-dating-app-firebase-adminsdk-ww6qs-b0153cc5b8.json"
 ENV PYTHONPATH=/python:$PYTHONPATH
 
-CMD python python/engine/main.py -c conf/prod --port 20000
+CMD python python/processor/main.py -c conf/prod
 
 EXPOSE 20000

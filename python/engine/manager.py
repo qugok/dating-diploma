@@ -1,18 +1,17 @@
 import generated.user_pb2 as user_pb2
 from lib.couchbase.client import CouchbaseClient
+from engine.pusher import Pusher
 
 import logging
 from google.protobuf.json_format import MessageToDict
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("engine")
 
 
 class Manager:
-    # TODO добавить валидацию, где необходимо
-    def __init__(self, config_path):
-        # TODO добавить отдельный конфиг для менеджера
-        self.couchbase_client = CouchbaseClient(config_path)
-        pass
+    def __init__(self, config):
+        self.couchbase_client = CouchbaseClient(config.PrivateDataPath)
+        self.pusher = Pusher(config)
 
     def register_user(self, user: user_pb2.TUser):
         self.couchbase_client.insert_user(user)
@@ -28,6 +27,9 @@ class Manager:
 
     def get_user(self, UID: str):
         return self.couchbase_client.get_user(UID)
+
+    def install_message_token(self, UID:str, token:str):
+        self.couchbase_client.set_message_token(UID, token)
 
     def get_users_to_show(self, UID:str, geo: None, distance:int=None, limit:int=None):
         # TODO добавить логики поиска подходящего человека
@@ -62,7 +64,11 @@ class Manager:
         reaction = user_pb2.TReaction(FromUID=FromUID, ToUID=ToUID, ReactionType=ReactionType)
 
         self.couchbase_client.upsert_reaction(reaction)
-
+        self.pusher.send_reactions([reaction])
+        other_reaction = self.couchbase_client.get_reaction(ToUID, FromUID)
+        if other_reaction is None or ReactionType != user_pb2.TReaction.ERT_LIKE:
+            return False
+        return other_reaction.ReactionType == user_pb2.TReaction.ERT_LIKE
 
     def send_messages(
         self,
@@ -70,7 +76,7 @@ class Manager:
     ):
 
         self.couchbase_client.store_messages(messages)
-        # TODO отправка сообщений через pusher to client
+        self.pusher.send_messages(messages)
 
     def read_messages(
         self,

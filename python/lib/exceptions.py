@@ -30,3 +30,22 @@ class WrongRequest(DatingServerException):
 
     def __str__(self) -> str:
         return f"wrong request: {self.message}"
+
+class KeyDontExist(DatingServerException):
+
+    def __init__(self, base:str, key:str, ) -> None:
+        self.e_type = TErrorInfo.EET_INTERNAL
+        self.base = base
+        self.key = key
+    def __str__(self) -> str:
+        return f"Key \"{self.key}\" not found in base \"{self.base}\""
+
+
+class KeyAlreadyExist(DatingServerException):
+
+    def __init__(self, base:str, key:str, ) -> None:
+        self.e_type = TErrorInfo.EET_INTERNAL
+        self.base = base
+        self.key = key
+    def __str__(self) -> str:
+        return f"Key \"{self.key}\" has found in base \"{self.base}\""

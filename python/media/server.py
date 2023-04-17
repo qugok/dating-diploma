@@ -9,18 +9,18 @@ from media import MediaManager
 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("media")
 
 class DatingMediaServer(dating_server_pb2_grpc.DatingServerServicer):
     # TODO научиться передавать ошибки не через поля, а в идеале и авторизацию
 
-    def __init__(self, config:config_pb2.TServerConfig):
+    def __init__(self, config):
         super().__init__()
         self.auth = FirebaseApp(config.Auth)
         self.validator = Validator()
 
         self.logger = logger
-        self.manager = MediaManager(config.PrivateDataPath)
+        self.manager = MediaManager()
 
     @process_simple_request(dating_server_pb2.UploadMediaReply)
     def UploadMedia(self, request:dating_server_pb2.UploadMediaRequest, context, user_auth_info):

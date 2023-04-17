@@ -1,0 +1,7 @@
+QueueClientConfig {
+    UserName: "processor"
+    TopicMapping {
+        From: "processor_queue"
+        To: "dev_processor_queue"
+    }
+}

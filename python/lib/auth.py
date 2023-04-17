@@ -8,7 +8,7 @@ import generated.config_pb2 as config_pb2
 from firebase_admin import messaging
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("lib")
 
 class UserAuthInfo() :
     def __init__(self, decoded_token):
@@ -19,9 +19,9 @@ class FirebaseApp():
     # TODO разделить авторизацию и аутентификацию
 
     def __init__(self, config:config_pb2.TAuthConfig):
-        # self.enabled = config.Enabled
+        self.enabled = config.Enabled
+        logger.debug(f"FirebaseApp.config.Enabled: {config.Enabled}")
         self.app = firebase_admin.initialize_app()
-        self.enabled = False
         self.logged_in_users = {}
 
     def authenticate_user(self, auth):
@@ -33,11 +33,11 @@ class FirebaseApp():
         user_info = self.get_user_auth_info(auth)
         if user_info.uid not in self.logged_in_users:
             self.logged_in_users[user_info.uid] = (auth.Token, user_info)
-        return self.logged_in_users[user_info.uid]
+        return self.logged_in_users[user_info.uid][1]
 
     def get_user_auth_info(self, auth: TAuth):
         decoded_token = firebase_auth.verify_id_token(auth.Token)
-        logger.debug(f"got token while verification: {decoded_token}")
+        logger.debug(f"got token while verification: {decoded_token} real token: {auth.Token}")
         return UserAuthInfo(decoded_token)
 
     def authorize_user(self, user_auth_info: UserAuthInfo, request_name, request):

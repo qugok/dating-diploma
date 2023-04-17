@@ -12,40 +12,41 @@ from engine.manager import Manager
 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("engine")
 
 class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
     # TODO научиться передавать ошибки не через поля, а в идеале и авторизацию
 
-    def __init__(self, config:config_pb2.TServerConfig):
+    def __init__(self, config):
         super().__init__()
         self.auth = FirebaseApp(config.Auth)
         self.validator = Validator()
 
         self.logger = logger
-        self.manager = Manager(config.PrivateDataPath)
+        self.manager = Manager(config)
 
     @process_simple_request(dating_server_pb2.GetUserReply)
     def GetUser(self, request, context, user_auth_info):
-        logger.info(f"Processiong GetUser with UID: {request.UID}")
         return {"User": self.manager.get_user(request.UID)}
 
     @process_simple_request(dating_server_pb2.RegisterUserReply)
     def RegisterUser(self, request, context, user_auth_info):
-        logger.info(f"Processiong RegisterUser with UID: {request.User.UID}")
         self.manager.register_user(request.User)
         return {}
 
     @process_simple_request(dating_server_pb2.UpdateUserReply)
     def UpdateUser(self, request, context, user_auth_info):
-        logger.info(f"Processiong UpdateUser with UID: {request.UserDelta.UID}")
         self.manager.update_user(request.UserDelta)
         return {}
 
     @process_simple_request(dating_server_pb2.SearchUsersReply)
     def SearchUsers(self, request :dating_server_pb2.SearchUsersRequest, context, user_auth_info):
-        logger.info(f"Processiong SearchUsers with UID: {request.UID} Geo: {request.Geo} Dist: {request.Distance}")
         return {"Users":self.manager.get_users_to_show(request.UID, request.Geo, distance=request.Distance)}
+
+    @process_simple_request(dating_server_pb2.SetMessageTokenReply)
+    def SetMessageToken(self, request:dating_server_pb2.SetMessageTokenRequest, context, user_auth_info):
+        self.manager.install_message_token(request.UID, request.Token)
+        return {}
 
     @process_simple_request(dating_server_pb2.GetReactionsReply)
     def GetReactions(self, request, context, user_auth_info):
@@ -62,18 +63,14 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     @process_simple_request(dating_server_pb2.SetReactionReply)
     def SetReaction(self, request, context, user_auth_info):
-        logger.info(f"Processiong SetUser with FromUID: {request.FromUID} ToUID: {request.ToUID} Reaction: {request.Reaction}")
-        self.manager.insert_reaction(request.FromUID, request.ToUID, request.Reaction)
-        return {}
+        return {"Match": self.manager.insert_reaction(request.FromUID, request.ToUID, request.Reaction)}
 
 
     @process_simple_request(dating_server_pb2.SendMessageReply)
     def SendMessage(self, request, context, user_auth_info):
-        logger.info(f"Processiong SendMessage")
         self.manager.send_messages(request.Messages)
         return {}
 
     @process_simple_request(dating_server_pb2.GetLastMessagesReply)
     def GetLastMessages(self, request, context, user_auth_info):
-        logger.info(f"Processiong GetLastMessages with FromUID: {request.FromUID} ToUID: {request.ToUID}")
         return {"Messages" : self.manager.read_messages(request.FromUID, request.ToUID)}

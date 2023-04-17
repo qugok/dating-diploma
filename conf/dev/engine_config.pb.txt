@@ -2,6 +2,10 @@ Auth {
     Enabled: false
 }
 
+QueueClientConfig {
+    UserName: "engine"
+}
+
 PrivateDataPath: "conf/private_data.pb.txt"
 
 

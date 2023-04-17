@@ -2,7 +2,7 @@ import generated.dating_server_pb2 as dating_server_pb2
 import generated.user_pb2 as user_pb2
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("lib")
 
 class Validator:
     def validate(self, method_name, request):
@@ -37,19 +37,21 @@ class Validator:
                 request.User.SearchDistanceKm
 
     def validate_UpdateUser(self, request:dating_server_pb2.UpdateUserRequest):
-        return request.HasField("User") and request.User.UID
+        return request.HasField("UserDelta") and request.UserDelta.UID
 
     def validate_SearchUsers(self, request:dating_server_pb2.SearchUsersRequest):
         return request.UID and request.HasField("Geo") and request.Distance
+
+    def validate_SetMessageToken(self, request:dating_server_pb2.SetMessageTokenRequest):
+        return request.UID and request.Token
 
     def validate_GetReactions(self, request:dating_server_pb2.GetReactionsRequest):
         return request.HasField("Key")
 
     def validate_SetReaction(self, request:dating_server_pb2.SetReactionRequest):
-        return request.FromUID and request.ToUID and request.Reaction
+        return request.FromUID and request.ToUID and request.Reaction and request.Reaction != user_pb2.TReaction.ERT_UNSET
 
     def __Message(self, message:user_pb2.TMessage):
-        logger.debug(str(["validate_SendMessage", not message.FromUID, not message.ToUID, message.Timestamp, message.Timestamp is None, not message.Text]))
         return message.FromUID and message.ToUID \
             and not message.Timestamp and message.Text
 

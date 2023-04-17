@@ -11,3 +11,4 @@ function StopApp {
 
 StopApp media
 StopApp engine
+StopApp processor

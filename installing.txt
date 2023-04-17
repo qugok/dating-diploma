@@ -49,3 +49,17 @@ sudo docker run -p 20000:20000 python-dating-engine
 
 sudo docker run --init --ulimit core=-1 --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine
 sudo docker run -it --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine bash
+
+kafkacat -C \
+         -b rc1a-itvja874bn7p94mb.mdb.yandexcloud.net:9091 \
+         -t processor_queue \
+         -X security.protocol=SASL_SSL \
+         -X sasl.mechanisms=SCRAM-SHA-512 \
+         -X sasl.username="processor_client" \
+         -X sasl.password="processor_client" \
+         -X ssl.ca.location=/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt -Z -K:
+
+sudo mkdir --parents /usr/local/share/ca-certificates/Yandex && \
+sudo wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+    --output-document /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+sudo chmod 655 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt

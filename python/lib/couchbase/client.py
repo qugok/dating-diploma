@@ -3,7 +3,7 @@ import logging
 from datetime import timedelta
 import generated.user_pb2 as user_pb2
 from lib.config import read_config_from
-from lib.exceptions import UserDontExist
+from lib.exceptions import UserDontExist, KeyDontExist, KeyAlreadyExist
 
 import generated.config_pb2 as config_pb2
 
@@ -25,7 +25,7 @@ from lib.misc import DictToMessage
 import uuid
 import time
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("lib")
 
 class CouchbaseClient:
     def __init__(self, config_path):
@@ -44,6 +44,25 @@ class CouchbaseClient:
         self.geo_data_collection = self.bucket.scope("indexing_jsons").collection("geo_data")
         self.reactions_collection = self.bucket.scope("indexing_jsons").collection("reactions_data")
         self.messages_collection = self.bucket.scope("indexing_jsons").collection("messages_data")
+        self.message_token_collection = self.bucket.scope("key_value").collection("message_token")
+
+    def get_message_token(self, UID:str):
+        if not self.has_message_token(UID):
+            raise KeyDontExist("message_token", UID)
+        result = self.message_token_collection.get(UID)
+        return result.content_as[str]
+
+    def has_message_token(self, UID:str):
+        result = self.message_token_collection.exists(UID)
+        return result.exists
+
+    def set_message_token(self, UID:str, token:str):
+        if self.has_message_token(UID):
+            raise KeyAlreadyExist("message_token", UID)
+        self.message_token_collection.insert(
+            UID,
+            token
+        )
 
     def __get_user(self, UID: str):
         logger.debug(f"getting user {UID} from state")
@@ -122,6 +141,14 @@ class CouchbaseClient:
         ]
         return reactions
 
+    def get_reaction(self, FromUID:str, ToUID:str):
+        if not self.reactions_collection.exists(FromUID + "_" + ToUID):
+            None
+        result = self.reactions_collection.get(
+            FromUID + "_" + ToUID,
+        )
+        reaction = DictToMessage(result.content_as[dict], user_pb2.TReaction)
+        return reaction
 
     def upsert_reaction(
         self,

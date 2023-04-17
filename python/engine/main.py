@@ -16,7 +16,9 @@ from engine.server import DatingServerEngine
 
 from lib.tools.parse_args import congifure_parser
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("engine")
+logger.setLevel(logging.DEBUG)
+
 
 def server(port, config):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -32,9 +34,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    config = read_config_from(config_pb2.TServerConfig, args.config_folder + "/config.pb.txt")
+    config = read_config_from(config_pb2.TEngineConfig, args.config_folder + "/engine_config.pb.txt")
 
-    logging.basicConfig(filename=args.log_path, level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', force=True)
+    logging.basicConfig(filename=args.log_path, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', force=True)
 
     logger.info("Starting Engine Server...")
     server(args.port, config)

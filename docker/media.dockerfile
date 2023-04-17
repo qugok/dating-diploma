@@ -28,6 +28,6 @@ ADD conf conf
 ENV GOOGLE_APPLICATION_CREDENTIALS="$/conf/sonder-dating-app-firebase-adminsdk-ww6qs-b0153cc5b8.json"
 ENV PYTHONPATH=/python:$PYTHONPATH
 
-CMD python python/media/main.py -c conf --port 20000
+CMD python python/media/main.py -c conf/prod --port 20000
 
 EXPOSE 20000

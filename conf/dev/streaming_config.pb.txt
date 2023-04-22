@@ -1,0 +1,11 @@
+Auth {
+    Enabled: false
+}
+
+QueueClientConfig {
+    UserName: "dev_streaming"
+    TopicMapping {
+        From: "streaming_queue"
+        To: "dev_streaming_queue"
+    }
+}

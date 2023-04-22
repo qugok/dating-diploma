@@ -1,3 +1,9 @@
+Auth {
+    Enabled: true
+}
+
 QueueClientConfig {
     UserName: "processor"
 }
+PrivateDataPath: "conf/private_data.pb.txt"
+

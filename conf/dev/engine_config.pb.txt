@@ -3,7 +3,15 @@ Auth {
 }
 
 QueueClientConfig {
-    UserName: "engine"
+    UserName: "dev_engine"
+    TopicMapping {
+        From: "processor_queue"
+        To: "dev_processor_queue"
+    }
+    TopicMapping {
+        From: "streaming_queue"
+        To: "dev_streaming_queue"
+    }
 }
 
 PrivateDataPath: "conf/private_data.pb.txt"

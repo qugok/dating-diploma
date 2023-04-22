@@ -14,10 +14,9 @@ class Validator:
     def validate_UploadMedia(self, request:dating_server_pb2.UploadMediaRequest):
         if not request.HasField("Media"):
             return False
-        valid_load_type = \
-            request.Media.LoadType == user_pb2.TLoadingMedia.ELT_BY_PART and request.Media.PartNumber is not None \
-            or \
-            request.Media.LoadType == user_pb2.TLoadingMedia.ELT_FULL and request.Media.PartNumber is None
+        valid_load_type = request.Media.LoadType == user_pb2.TLoadingMedia.ELT_FULL and not request.Media.PartNumber
+            # or request.Media.LoadType == user_pb2.TLoadingMedia.ELT_BY_PART and request.Media.PartNumber
+            # TODO раскомментить когда ELT_BY_PART будет поддержан
 
         return request.HasField("Media") and valid_load_type and\
                 request.Media.Type and \
@@ -30,6 +29,9 @@ class Validator:
     def validate_RegisterUser(self, request:dating_server_pb2.RegisterUserRequest):
         if not request.HasField("User"):
             return False
+        for media in request.User.Media:
+            if len(media.Path) > 60:
+                return False
         return request.User.UID and \
                 request.User.Name and \
                 request.User.Description and \
@@ -37,6 +39,9 @@ class Validator:
                 request.User.SearchDistanceKm
 
     def validate_UpdateUser(self, request:dating_server_pb2.UpdateUserRequest):
+        for media in request.UserDelta.Media:
+            if len(media.Path) > 60:
+                return False
         return request.HasField("UserDelta") and request.UserDelta.UID
 
     def validate_SearchUsers(self, request:dating_server_pb2.SearchUsersRequest):
@@ -46,7 +51,7 @@ class Validator:
         return request.UID and request.Token
 
     def validate_GetReactions(self, request:dating_server_pb2.GetReactionsRequest):
-        return request.HasField("Key")
+        return request.FromUID or request.ToUID
 
     def validate_SetReaction(self, request:dating_server_pb2.SetReactionRequest):
         return request.FromUID and request.ToUID and request.Reaction and request.Reaction != user_pb2.TReaction.ERT_UNSET
@@ -58,7 +63,6 @@ class Validator:
     def validate_SendMessage(self, request:dating_server_pb2.SendMessageRequest):
         if len(request.Messages) == 0:
             return False
-
         for m in request.Messages:
             if not self.__Message(m):
                 return False
@@ -67,3 +71,6 @@ class Validator:
 
     def validate_GetLastMessages(self, request:dating_server_pb2.GetLastMessagesRequest):
         return request.FromUID and request.ToUID
+
+    def validate_GetChats(self, request:dating_server_pb2.GetChatsRequest):
+        return not not request.UID

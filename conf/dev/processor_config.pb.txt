@@ -1,7 +1,14 @@
+Auth {
+    Enabled: false
+}
+
 QueueClientConfig {
-    UserName: "processor"
+    UserName: "dev_processor"
     TopicMapping {
         From: "processor_queue"
         To: "dev_processor_queue"
     }
 }
+
+PrivateDataPath: "conf/private_data.pb.txt"
+

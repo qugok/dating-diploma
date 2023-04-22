@@ -43,11 +43,10 @@ class FirebaseApp():
     def authorize_user(self, user_auth_info: UserAuthInfo, request_name, request):
         if not self.enabled:
             return True
+        return True
 
-    def send_user_push(self, UID:str, title, body):
-        if UID not in self.logged_in_users:
-            return False
-        token, _ = self.logged_in_users[UID]
+    def send_user_push(self, token:str, title, body):
+        logger.debug(f"sending push title: {title} body: {body} token: {token}")
         message = messaging.Message(
             notification=messaging.Notification(
                 title=title,

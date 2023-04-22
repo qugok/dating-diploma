@@ -50,16 +50,7 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     @process_simple_request(dating_server_pb2.GetReactionsReply)
     def GetReactions(self, request, context, user_auth_info):
-        field_name = request.WhichOneof("Key")
-        if field_name is None:
-            raise Exception("Empty request")
-
-        if field_name == "FromUID":
-            reactions = self.manager.get_reactions_from(request.FromUID)
-        if field_name == "ToUID":
-            reactions = self.manager.get_reactions_to(request.ToUID)
-
-        return {"Reactions":reactions}
+        return {"Reactions":self.manager.get_reactions(request.FromUID, request.ToUID)}
 
     @process_simple_request(dating_server_pb2.SetReactionReply)
     def SetReaction(self, request, context, user_auth_info):
@@ -74,3 +65,7 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
     @process_simple_request(dating_server_pb2.GetLastMessagesReply)
     def GetLastMessages(self, request, context, user_auth_info):
         return {"Messages" : self.manager.read_messages(request.FromUID, request.ToUID)}
+
+    @process_simple_request(dating_server_pb2.GetChatsReply)
+    def GetChats(self, request, context, user_auth_info):
+        return {"Chats" : self.manager.get_chats(request.UID)}

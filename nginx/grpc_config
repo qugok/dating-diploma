@@ -6,6 +6,9 @@ upstream engine {
     server 127.0.0.1:45050;
 }
 
+upstream streaming {
+    server 127.0.0.1:45060;
+}
 
 server {
     listen 55555 http2;
@@ -22,5 +25,12 @@ server {
 
     location /server.DatingServer/DownloadMedia {
         grpc_pass grpc://media;
+    }
+
+    location /server.DatingServer/GetUpdates {
+        grpc_read_timeout 2h;
+        # grpc_send_timeout 15s;
+        # grpc_socket_keepalive on;
+        grpc_pass grpc://streaming;
     }
 }

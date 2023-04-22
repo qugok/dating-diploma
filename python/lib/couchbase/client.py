@@ -44,6 +44,7 @@ class CouchbaseClient:
         self.geo_data_collection = self.bucket.scope("indexing_jsons").collection("geo_data")
         self.reactions_collection = self.bucket.scope("indexing_jsons").collection("reactions_data")
         self.messages_collection = self.bucket.scope("indexing_jsons").collection("messages_data")
+        self.chats_collection = self.bucket.scope("indexing_jsons").collection("chats_data")
         self.message_token_collection = self.bucket.scope("key_value").collection("message_token")
 
     def get_message_token(self, UID:str):
@@ -57,9 +58,7 @@ class CouchbaseClient:
         return result.exists
 
     def set_message_token(self, UID:str, token:str):
-        if self.has_message_token(UID):
-            raise KeyAlreadyExist("message_token", UID)
-        self.message_token_collection.insert(
+        self.message_token_collection.upsert(
             UID,
             token
         )
@@ -95,6 +94,9 @@ class CouchbaseClient:
 
         user, old_cas = self.__get_user(user_delta.UID)
         user.MergeFrom(user_delta)
+        if len(user_delta.Media) > 0:
+            del user.Media[:]
+            user.Media.extend(user_delta.Media)
 
         self.user_data_collection.replace(
             user.UID,
@@ -141,11 +143,17 @@ class CouchbaseClient:
         ]
         return reactions
 
+    def has_reaction(self, FromUID:str, ToUID:str):
+        key = FromUID + "_" + ToUID
+        result = self.reactions_collection.exists(key)
+        return result.exists
+
     def get_reaction(self, FromUID:str, ToUID:str):
-        if not self.reactions_collection.exists(FromUID + "_" + ToUID):
+        key = FromUID + "_" + ToUID
+        if not self.has_reaction(FromUID, ToUID):
             None
         result = self.reactions_collection.get(
-            FromUID + "_" + ToUID,
+            key,
         )
         reaction = DictToMessage(result.content_as[dict], user_pb2.TReaction)
         return reaction
@@ -184,7 +192,10 @@ class CouchbaseClient:
         result = self.cluster.search_query(
             "messages_index",
             TermQuery(UID),
-            SearchOptions(fields=list(user_pb2.TMessage.DESCRIPTOR.fields_by_name))
+            SearchOptions(
+                fields=list(user_pb2.TMessage.DESCRIPTOR.fields_by_name),
+                limit = 100,
+                )
         )
 
         messages = [
@@ -193,3 +204,34 @@ class CouchbaseClient:
         ]
 
         return messages
+
+    def get_chat(self, key:str):
+        result = self.chats_collection.get(
+            key,
+        )
+        chat = DictToMessage(result.content_as[dict], user_pb2.TChat)
+        return chat
+
+    def get_chats(
+        self,
+        UID: str,
+    ):
+        result = self.cluster.search_query(
+            "chats_index",
+            TermQuery(UID)
+        )
+
+        chats = [
+            self.get_chat(row.id)
+            for row in result
+        ]
+        return chats
+
+    def upsert_chat(
+        self,
+        chat: user_pb2.TChat,
+    ):
+        self.chats_collection.upsert(
+            chat.UID1 + "_" + chat.UID2,
+            MessageToDict(chat)
+        )

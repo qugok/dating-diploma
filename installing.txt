@@ -20,6 +20,12 @@ sudo python -m pip install grpcio-tools
 sudo python -m pip install couchbase
 sudo python -m pip install uuid
 sudo python -m pip install boto3
+sudo python -m pip install redis
+sudo python -m pip install redis-py-cluster
+sudo python -m pip install asyncio
+
+sudo python -m pip install kafka-python lz4 python-snappy crc32c
+sudo python -m pip install aiokafka
 
 sudo pip install firebase-admin
 
@@ -44,11 +50,15 @@ sudo docker push cr.yandex/crpmht6s4vkhnj1pe05c/python-engine
 
 
 
+
 sudo docker run -p 20000:20000 python-dating-engine
 
 
 sudo docker run --init --ulimit core=-1 --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine
 sudo docker run -it --mount type=bind,source=/tmp/,target=/tmp/ python-dating-engine bash
+sudo docker run -it --mount type=bind,source=/tmp/,target=/tmp/ nginx bash
+
+nginx
 
 kafkacat -C \
          -b rc1a-itvja874bn7p94mb.mdb.yandexcloud.net:9091 \

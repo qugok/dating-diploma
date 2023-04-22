@@ -1,0 +1,7 @@
+Auth {
+    Enabled: true
+}
+
+QueueClientConfig {
+    UserName: "streaming"
+}

@@ -31,7 +31,7 @@ RUN mkdir --parents /usr/local/share/ca-certificates/Yandex
 RUN wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" --output-document /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt
 RUN chmod 655 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt
 
-ENV GOOGLE_APPLICATION_CREDENTIALS="$/conf/sonder-dating-app-firebase-adminsdk-ww6qs-b0153cc5b8.json"
+ENV GOOGLE_APPLICATION_CREDENTIALS="/conf/sonder-dating-app-firebase-adminsdk-ww6qs-b0153cc5b8.json"
 ENV PYTHONPATH=/python:$PYTHONPATH
 
 CMD python python/engine/main.py -c conf/prod --port 20000

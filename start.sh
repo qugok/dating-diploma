@@ -41,6 +41,7 @@ function runApp {
 runApp media 45000
 runApp engine 45050
 runApp processor
+runApp streaming 45060
 
 # daemon  --name="dating_server" \
 #         --pidfile=$RUN_DIR/dating_server.pid \

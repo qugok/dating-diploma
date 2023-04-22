@@ -5,31 +5,32 @@ from generated.misc_pb2 import TErrorInfo
 from lib.exceptions import DatingServerException, WrongRequest
 import traceback
 from google.protobuf.json_format import MessageToDict
+from google.protobuf.message import Message
 
-logger = logging.getLogger("lib")
+from lib.tools.proto_utils import FullMessageToDict
+
+logger = logging.getLogger("decorators")
 logger.setLevel(logging.DEBUG)
 
 def process_simple_request(reply_class):
-    def MessageToDictWithoutAuth(message):
-        js_dict:dict= MessageToDict(message)
-        if "Auth" in js_dict:
-            js_dict.pop("Auth")
-        return js_dict
+
 
     def real_decorator(request_func=None):
         def wrapper(self, request, context):
             logger.debug(f"preparing {str(request_func.__name__)}")
             try:
-                logger.debug(f"authentication user auth {MessageToDict(request.Auth)}")
+                logger.debug(f"authentication user auth {FullMessageToDict(request.Auth)}")
                 user_auth_info = self.auth.authenticate_user(request.Auth)
+                logger.debug(f"authentication got user_auth_info: {user_auth_info}")
                 if user_auth_info is None:
-                    logger.debug(f"authentication user_auth_info: {user_auth_info}")
+                    logger.debug(f"ErrorReply: authentication user_auth_info: {user_auth_info}")
                     return SetErrorReply(
                         reply_class(),
-                        f"authentication error for user auth {MessageToDict(request.Auth)}",
+                        f"authentication error for user auth {FullMessageToDict(request.Auth)}",
                         TErrorInfo.EET_AUTHORIZATION
                     )
                 if not self.auth.authorize_user(user_auth_info, request_func.__name__, request):
+                    logger.debug(f"ErrorReply: authorization failed: {user_auth_info} {request_func.__name__} {FullMessageToDict(request)}")
                     return SetErrorReply(
                         reply_class(),
                         f"authorization error for user {user_auth_info.uid}",
@@ -46,11 +47,12 @@ def process_simple_request(reply_class):
                 )
 
             try:
-                logger.debug(f"Processiong {request_func.__name__} request: {MessageToDictWithoutAuth(request)}")
+                logger.debug(f"Processiong {request_func.__name__} request: {FullMessageToDict(request, True)}")
                 if not self.validator.validate(request_func.__name__, request):
-                    raise WrongRequest(f"validation failed. Type: {request_func.__name__} request: {MessageToDictWithoutAuth(request)}")
+                    raise WrongRequest(f"validation failed. Type: {request_func.__name__} request: {FullMessageToDict(request, True)}")
+                logger.debug(f"Valid request: {request_func.__name__} request: {FullMessageToDict(request, True)}")
                 kws = request_func(self, request, context, user_auth_info)
-                logger.debug(f"Processed {request_func.__name__} request, result: {kws}")
+                logger.debug(f"Processed {request_func.__name__} request, result: {FullMessageToDict(kws)}")
                 return SetOkReplyStatus(
                     reply_class(**kws)
                 )

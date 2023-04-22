@@ -6,6 +6,7 @@ from lib.config import read_config_from
 from concurrent import futures
 import generated.config_pb2 as config_pb2
 import generated.event_pb2 as event_pb2
+import traceback
 
 from google.protobuf import text_format
 
@@ -15,16 +16,19 @@ from lib.queue_client.kafka_queue_client import QueueClient
 from processor.handler import Handler
 
 logger = logging.getLogger("processor")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 def server(config):
     client = QueueClient(config.QueueClientConfig)
     logger.info("Server started")
-    handler = Handler()
+    handler = Handler(config)
     for msg in client.read_queue():
         event = event_pb2.TEvent()
         event.ParseFromString(msg.value)
-        handler.HandleEvent(event)
+        try:
+            handler.HandleEvent(event)
+        except Exception as e:
+            logger.error(f"got exception {str(e) + str(traceback.format_exc())}")
 
 if __name__ == '__main__':
     parser = congifure_parser()

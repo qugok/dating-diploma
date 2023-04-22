@@ -11,10 +11,14 @@ class Pusher:
         self.queue_client = QueueClient(config.QueueClientConfig)
 
     def send_messages(self, messages):
-        event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_MESSAGE, Messages=messages)
-        self.queue_client.write_to("processor_queue", event.SerializeToString())
+        push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_MESSAGE, Messages=messages)
+        stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_MESSAGE, Messages=messages)
+        self.queue_client.write_to("processor_queue", push_event.SerializeToString())
+        self.queue_client.write_to("streaming_queue", stream_event.SerializeToString())
 
     def send_reactions(self, reactions):
-        event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_REACTION, Reactions=reactions)
-        self.queue_client.write_to("processor_queue", event.SerializeToString())
+        push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_REACTION, Reactions=reactions)
+        stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_REACTION, Reactions=reactions)
+        self.queue_client.write_to("processor_queue", push_event.SerializeToString())
+        self.queue_client.write_to("streaming_queue", stream_event.SerializeToString())
 

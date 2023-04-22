@@ -1,6 +1,6 @@
 REGISTRY_ID="crpmht6s4vkhnj1pe05c"
 
-VERSION="0.1.50"
+VERSION="0.1.65"
 
 # sudo docker run -p 20000:20000 python-engine
 

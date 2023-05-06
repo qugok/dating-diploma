@@ -54,7 +54,7 @@ class Handler(HandlerBase):
             react = "Лайк" if reaction.ReactionType == user_pb2.TReaction.ERT_LIKE else "Дизлайк"
             title = f"{react} от {user.Name}"
 
-            body = ""
+            body = title
 
             self.fapp.send_user_push(token, title, body)
 

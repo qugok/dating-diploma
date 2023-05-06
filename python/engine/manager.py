@@ -44,23 +44,15 @@ class Manager:
 
         return users
 
-    def get_reactions(self, FromUID:str, ToUID:str):
+    def get_reactions(self, FromUID:str, ToUID:str, only_matches:bool, offset=0, limit=100):
         logger.debug(f"manager::get_reactions FromUID: {FromUID} ToUID: {ToUID}")
         if not ToUID:
-            return self.get_reactions_from(FromUID)
+            return self.couchbase_client.get_reactions_from(FromUID, only_matches, offset, limit)
         if not FromUID:
-            return self.get_reactions_to(ToUID)
-        if self.couchbase_client.has_reaction(ToUID, FromUID):
-            return [self.couchbase_client.get_reaction(ToUID, FromUID)]
+            return self.couchbase_client.get_reactions_to(ToUID, only_matches, offset, limit)
+        if self.couchbase_client.has_reaction(FromUID, ToUID):
+            return [self.couchbase_client.get_reaction(FromUID, ToUID)]
         return []
-
-    def get_reactions_from(self, UID:str):
-        reactions = self.couchbase_client.get_reactions_with(UID)
-        return [react for react in reactions if react.FromUID == UID]
-
-    def get_reactions_to(self, UID:str):
-        reactions = self.couchbase_client.get_reactions_with(UID)
-        return [react for react in reactions if react.ToUID == UID]
 
     def insert_reaction(
         self,
@@ -84,7 +76,7 @@ class Manager:
         reaction.IsMatch = is_match
         self.couchbase_client.upsert_reaction(reaction)
 
-        if other_reaction.IsMatch != is_match:
+        if other_reaction is not None and other_reaction.IsMatch != is_match:
             other_reaction.IsMatch == is_match
             self.couchbase_client.upsert_reaction(other_reaction)
 
@@ -104,9 +96,11 @@ class Manager:
         self,
         FromUID: str,
         ToUID: str,
+        offset=0,
+        limit=100
     ):
-        messages = self.couchbase_client.read_messages_with(FromUID)
-        return [message for message in messages if message.FromUID == FromUID and message.ToUID == ToUID]
+        messages = self.couchbase_client.read_messages(FromUID, ToUID, offset, limit)
+        return messages
 
     def set_chat_last_message(
         self,
@@ -119,5 +113,7 @@ class Manager:
     def get_chats(
         self,
         UID:str,
+        offset=0,
+        limit=100
     ):
-        return self.couchbase_client.get_chats(UID)
+        return self.couchbase_client.get_chats(UID, offset, limit)

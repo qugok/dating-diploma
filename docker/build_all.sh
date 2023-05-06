@@ -1,6 +1,6 @@
 REGISTRY_ID="crpmht6s4vkhnj1pe05c"
 
-VERSION="0.1.65"
+VERSION="0.1.76"
 
 # sudo docker run -p 20000:20000 python-engine
 
@@ -12,10 +12,14 @@ sudo docker build -f docker/engine.dockerfile -t cr.yandex/$REGISTRY_ID/python-e
 
 sudo docker push cr.yandex/$REGISTRY_ID/python-engine:$VERSION
 
-sudo docker build -f docker/media.dockerfile -t cr.yandex/$REGISTRY_ID/python-media:$VERSION .
+# sudo docker build -f docker/media.dockerfile -t cr.yandex/$REGISTRY_ID/python-media:$VERSION .
 
-sudo docker push cr.yandex/$REGISTRY_ID/python-media:$VERSION
+# sudo docker push cr.yandex/$REGISTRY_ID/python-media:$VERSION
 
-sudo docker build -f docker/processor.dockerfile -t cr.yandex/$REGISTRY_ID/python-processor:$VERSION .
+# sudo docker build -f docker/processor.dockerfile -t cr.yandex/$REGISTRY_ID/python-processor:$VERSION .
 
-sudo docker push cr.yandex/$REGISTRY_ID/python-processor:$VERSION
+# sudo docker push cr.yandex/$REGISTRY_ID/python-processor:$VERSION
+
+# sudo docker build -f docker/streaming.dockerfile -t cr.yandex/$REGISTRY_ID/python-streaming:$VERSION .
+
+# sudo docker push cr.yandex/$REGISTRY_ID/python-streaming:$VERSION

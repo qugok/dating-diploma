@@ -28,9 +28,23 @@ server {
     }
 
     location /server.DatingServer/GetUpdates {
-        grpc_read_timeout 2h;
+        # grpc_read_timeout 2h;
         # grpc_send_timeout 15s;
         # grpc_socket_keepalive on;
+        grpc_pass grpc://streaming;
+    }
+}
+
+
+server {
+    listen 55000 http2;
+    charset utf-8;
+    access_log /home/diploma/dating-diploma/nginx/access.log;
+
+    location /server.DatingServer/GetUpdates {
+        grpc_read_timeout 2h;
+        # grpc_send_timeout 15s;
+        grpc_socket_keepalive on;
         grpc_pass grpc://streaming;
     }
 }

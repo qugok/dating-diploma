@@ -15,8 +15,8 @@ from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
                                QueryOptions, UpsertOptions, GetOptions, SearchOptions, InsertOptions, ReplaceOptions, ExistsOptions)
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
-from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery
-from couchbase.logic.search import SortGeoDistance
+from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery, ConjunctionQuery, DisjunctionQuery, MatchAllQuery
+from couchbase.logic.search import SortGeoDistance, SortField
 
 from google.protobuf.json_format import MessageToDict
 
@@ -127,18 +127,46 @@ class CouchbaseClient:
         UIDs = [row.id for row in result.rows()]
         return UIDs
 
-    def get_reactions_with(self, UID: str):
-        #  TODO научиться в SDK искать в конкретном поле а не во всех
-        #  TODO переименовать в reactions_index или что-то подобное, чтобы сразу было понятно что поиск идёт по индексу
-        print(list(user_pb2.TReaction.DESCRIPTOR.fields_by_name), flush=True)
-        result = self.cluster.search_query(
-            "reactions_index",
-            TermQuery(UID),
-            SearchOptions(fields=list(user_pb2.TReaction.DESCRIPTOR.fields_by_name))
-        )
+    def get_reactions_from(self,
+        FromUID: str,
+        only_matches:bool,
+        offset=0,
+        limit=100,
+    ):
+
+        only_matches_str = "AND IsMatch=true" if only_matches else ""
+
+        query = f"""
+        SELECT *
+        FROM `dating-data`.indexing_jsons.reactions_data
+        WHERE FromUID=$uid {only_matches_str}
+        OFFSET $offset
+        LIMIT $limit"""
+        result = self.cluster.query(query, uid=FromUID, offset=offset, limit=limit)
 
         reactions = [
-            DictToMessage(row.fields, user_pb2.TReaction)
+            DictToMessage(row['reactions_data'], user_pb2.TReaction)
+            for row in result
+        ]
+        return reactions
+
+    def get_reactions_to(self,
+        ToUID: str,
+        only_matches:bool,
+        offset=0,
+        limit=100,
+    ):
+
+        only_matches_str = "AND IsMatch=true" if only_matches else ""
+        query = f"""
+        SELECT *
+        FROM `dating-data`.indexing_jsons.reactions_data
+        WHERE ToUID=$uid {only_matches_str}
+        OFFSET $offset
+        LIMIT $limit"""
+        result = self.cluster.query(query, uid=ToUID, offset=offset, limit=limit)
+        reactions = [
+            DictToMessage(row['reactions_data'], user_pb2.TReaction)
             for row in result
         ]
         return reactions
@@ -151,7 +179,7 @@ class CouchbaseClient:
     def get_reaction(self, FromUID:str, ToUID:str):
         key = FromUID + "_" + ToUID
         if not self.has_reaction(FromUID, ToUID):
-            None
+            return None
         result = self.reactions_collection.get(
             key,
         )
@@ -205,6 +233,29 @@ class CouchbaseClient:
 
         return messages
 
+    def read_messages(
+        self,
+        UID1: str,
+        UID2: str,
+        offset=0,
+        limit=100,
+    ):
+        query = """
+        SELECT *
+        FROM `dating-data`.indexing_jsons.messages_data
+        WHERE (FromUID=$uid1 AND ToUID=$uid2) OR (FromUID=$uid2 AND ToUID=$uid1)
+        ORDER BY Timestamp DESC
+        OFFSET $offset
+        LIMIT $limit"""
+        result = self.cluster.query(query, uid1=UID1, uid2=UID2, offset=offset, limit=limit)
+
+        messages = [
+            DictToMessage(row['messages_data'], user_pb2.TMessage)
+            for row in result
+        ]
+
+        return messages
+
     def get_chat(self, key:str):
         result = self.chats_collection.get(
             key,
@@ -215,14 +266,21 @@ class CouchbaseClient:
     def get_chats(
         self,
         UID: str,
+        offset=0,
+        limit=100,
     ):
-        result = self.cluster.search_query(
-            "chats_index",
-            TermQuery(UID)
-        )
+
+        query = """
+        SELECT *
+        FROM `dating-data`.indexing_jsons.chats_data
+        WHERE UID1=$uid OR UID2=$uid
+        ORDER BY LastMessage.Timestamp DESC
+        OFFSET $offset
+        LIMIT $limit"""
+        result = self.cluster.query(query, uid=UID, offset=offset, limit=limit)
 
         chats = [
-            self.get_chat(row.id)
+            DictToMessage(row['chats_data'], user_pb2.TChat)
             for row in result
         ]
         return chats

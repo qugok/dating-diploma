@@ -23,7 +23,7 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
     def __init__(self, config):
         super().__init__()
         self.validator = Validator()
-        self.sessions = defaultdict(list)
+        self.sessions = dict()
         self.sessions_lock = asyncio.Lock()
 
     async def send_update(self, UID:str, reply:dating_server_pb2.GetUpdatesReply):
@@ -32,9 +32,9 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
             if UID not in self.sessions:
                 logger.info(f"there is no session for UID: {UID}")
                 return
-            for session in self.sessions[UID]:
-                logger.debug(f"sending messgae to single session")
-                session.put_nowait(reply)
+            session = self.sessions[UID]
+            logger.debug(f"sending messgae to single session")
+            session.put_nowait(reply)
 
     async def GetUpdates(self, request:dating_server_pb2.GetUpdatesRequest, context):
         logger.info(f"Got GetUpdates request: {FullMessageToDict(request)}")
@@ -42,11 +42,15 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
         yield rsp
         responce_queue = asyncio.Queue()
         async with self.sessions_lock:
-            self.sessions[request.UID].append(responce_queue)
+            if request.UID in self.sessions:
+                await self.sessions[request.UID].put(None)
+            self.sessions[request.UID] = responce_queue
         logger.info(f"start GetUpdates waiting for {request.UID}")
         try:
             while True:
                 new_item = await responce_queue.get()
+                if new_item is None:
+                    return
                 logger.debug(f"sending for UID:{request.UID} event: {FullMessageToDict(new_item)}")
                 yield new_item
                 logger.debug(f"waiting ro new responce for UID:{request.UID}")

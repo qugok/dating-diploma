@@ -49,8 +49,11 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
         return {}
 
     @process_simple_request(dating_server_pb2.GetReactionsReply)
-    def GetReactions(self, request, context, user_auth_info):
-        return {"Reactions":self.manager.get_reactions(request.FromUID, request.ToUID)}
+    def GetReactions(self, request:dating_server_pb2.GetReactionsRequest, context, user_auth_info):
+        limit = request.Count or 100
+        offset = request.Offset or 0
+        only_matches = request.OnlyMatches or False
+        return {"Reactions":self.manager.get_reactions(request.FromUID, request.ToUID, only_matches, offset, limit)}
 
     @process_simple_request(dating_server_pb2.SetReactionReply)
     def SetReaction(self, request, context, user_auth_info):
@@ -64,8 +67,12 @@ class DatingServerEngine(dating_server_pb2_grpc.DatingServerServicer):
 
     @process_simple_request(dating_server_pb2.GetLastMessagesReply)
     def GetLastMessages(self, request, context, user_auth_info):
-        return {"Messages" : self.manager.read_messages(request.FromUID, request.ToUID)}
+        limit = request.Count or 100
+        offset = request.Offset or 0
+        return {"Messages" : self.manager.read_messages(request.FromUID, request.ToUID, offset, limit)}
 
     @process_simple_request(dating_server_pb2.GetChatsReply)
     def GetChats(self, request, context, user_auth_info):
-        return {"Chats" : self.manager.get_chats(request.UID)}
+        limit = request.Count or 100
+        offset = request.Offset or 0
+        return {"Chats" : self.manager.get_chats(request.UID, offset, limit)}

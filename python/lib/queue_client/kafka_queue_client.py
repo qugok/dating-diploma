@@ -20,9 +20,9 @@ class QueueClient:
         for mapping in config.TopicMapping:
             self.topic_mapping[mapping.From] = mapping.To
 
-    def write_to(self, topic:str, message:str, key:str=None, flush=True):
+    def write_to(self, topic:str, message:str, shard:int=None, flush=True):
         real_topic = topic if topic not in self.topic_mapping else self.topic_mapping[topic]
-        self.producer.send(real_topic, message, key)
+        self.producer.send(real_topic, message, partition=shard)
         if flush:
             self.producer.flush()
 

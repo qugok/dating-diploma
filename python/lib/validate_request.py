@@ -26,23 +26,41 @@ class Validator:
     def validate_GetUser(self, request:dating_server_pb2.GetUserRequest):
         return not not request.UID
 
+    def _good_age(self, age):
+            return age and 18 <= age <= 100
+
+    def _validate_interests(self, interests: user_pb2.TInterests):
+        if self._good_age(interests.AgeFrom) and self._good_age(interests.AgeTo) and interests.AgeFrom > interests.AgeTo:
+            return False
+        return True
+
+    def _validate_user(self, user: user_pb2.TUser):
+        base_fields = user.UID and \
+                    user.Name and \
+                    user.Description and \
+                    user.LastGeo and \
+                    user.SearchDistanceKm and \
+                    user.Gender and \
+                    self._good_age(user.Age)
+        interests = self._validate_interests(user.Interests) if user.HasField("Interests") else True
+        interests = True
+        return base_fields and interests
+
+
     def validate_RegisterUser(self, request:dating_server_pb2.RegisterUserRequest):
         if not request.HasField("User"):
             return False
         for media in request.User.Media:
             if len(media.Path) > 60:
                 return False
-        return request.User.UID and \
-                request.User.Name and \
-                request.User.Description and \
-                request.User.LastGeo and \
-                request.User.SearchDistanceKm
+        return self._validate_user(request.User)
 
     def validate_UpdateUser(self, request:dating_server_pb2.UpdateUserRequest):
         for media in request.UserDelta.Media:
             if len(media.Path) > 60:
                 return False
-        return request.HasField("UserDelta") and request.UserDelta.UID
+        return request.HasField("UserDelta") and request.UserDelta.UID \
+            and (self._validate_interests(request.UserDelta.Interests) if request.UserDelta.HasField("Interests") else True)
 
     def validate_SearchUsers(self, request:dating_server_pb2.SearchUsersRequest):
         return request.UID and request.HasField("Geo") and request.Distance

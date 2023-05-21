@@ -15,8 +15,8 @@ from couchbase.options import (ClusterOptions, ClusterTimeoutOptions,
                                QueryOptions, UpsertOptions, GetOptions, SearchOptions, InsertOptions, ReplaceOptions, ExistsOptions)
 from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
-from couchbase.logic.search_queries import GeoDistanceQuery, TermQuery, ConjunctionQuery, DisjunctionQuery, MatchAllQuery
-from couchbase.logic.search import SortGeoDistance, SortField
+from couchbase.logic.search_queries import GeoDistanceQuery
+from couchbase.logic.search import SortGeoDistance
 
 from google.protobuf.json_format import MessageToDict
 
@@ -97,6 +97,8 @@ class CouchbaseClient:
         if len(user_delta.Media) > 0:
             del user.Media[:]
             user.Media.extend(user_delta.Media)
+        if user_delta.HasField("Interests"):
+            user.Interests.CopyFrom(user_delta.Interests)
 
         self.user_data_collection.replace(
             user.UID,
@@ -211,27 +213,6 @@ class CouchbaseClient:
             str(uuid.uuid4()),
             MessageToDict(message)
         )
-
-
-    def read_messages_with(
-        self,
-        UID: str,
-    ):
-        result = self.cluster.search_query(
-            "messages_index",
-            TermQuery(UID),
-            SearchOptions(
-                fields=list(user_pb2.TMessage.DESCRIPTOR.fields_by_name),
-                limit = 100,
-                )
-        )
-
-        messages = [
-            DictToMessage(row.fields, user_pb2.TMessage)
-            for row in result
-        ]
-
-        return messages
 
     def read_messages(
         self,

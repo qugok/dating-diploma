@@ -1,14 +1,15 @@
 from aiokafka import AIOKafkaProducer
 from aiokafka import AIOKafkaConsumer
+from aiokafka import TopicPartition
 from aiokafka.helpers import create_ssl_context
 import ssl
 from generated.config_pb2 import TQueueClientConfig
 
 
 class AIOQueueClient:
-    def __init__(self, config:TQueueClientConfig):
+    def __init__(self, config:TQueueClientConfig, shard):
         context = create_ssl_context(cafile="/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt")
-
+        self.shard = shard
         args = {
             "bootstrap_servers": ['rc1a-itvja874bn7p94mb.mdb.yandexcloud.net:9091'],
             "security_protocol": "SASL_SSL",
@@ -18,7 +19,12 @@ class AIOQueueClient:
             "ssl_context": context
         }
         self.producer = AIOKafkaProducer(**args)
-        self.consumer = AIOKafkaConsumer(f'{config.UserName}_queue', **args)
+
+        if self.shard:
+            self.consumer = AIOKafkaConsumer(**args)
+            self.consumer.assign([TopicPartition(f'{config.UserName}_queue', self.shard)])
+        else:
+            self.consumer = AIOKafkaConsumer(f'{config.UserName}_queue', **args)
 
         self.topic_mapping = {}
         for mapping in config.TopicMapping:
@@ -32,12 +38,10 @@ class AIOQueueClient:
         await self.producer.stop()
         await self.consumer.stop()
 
-
-
-    async def write_to(self, topic:str, message:str, key:str=None, flush=True):
+    async def write_to(self, topic:str, message:str, shard:int=None):
         # Возможное место ускорения - подумать зо замене send_and_wait на send или send_batch
         real_topic = topic if topic not in self.topic_mapping else self.topic_mapping[topic]
-        await self.producer.send_and_wait(real_topic, message, key)
+        await self.producer.send_and_wait(real_topic, message, partition=shard)
 
     async def read_queue(self):
         async for msg in self.consumer:

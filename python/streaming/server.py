@@ -5,12 +5,14 @@ from collections import defaultdict
 import generated.dating_server_pb2 as dating_server_pb2
 import generated.dating_server_pb2_grpc as dating_server_pb2_grpc
 import generated.misc_pb2 as misc_pb2
+import generated.config_pb2 as config_pb2
 
 from lib.tools.proto_utils import FullMessageToDict
 
 from lib.tools.decorators import process_simple_request
 # from lib.auth import FirebaseApp
 from lib.validate_request import Validator
+from lib.redis.client import RedisClient
 # from engine.manager import Manager
 import traceback
 import logging
@@ -20,11 +22,13 @@ logger = logging.getLogger("streaming")
 class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
     # TODO научиться передавать ошибки не через поля, а в идеале и авторизацию
 
-    def __init__(self, config):
+    def __init__(self, config: config_pb2.TStreamingConfig, shard):
         super().__init__()
+        self.shard = shard
         self.validator = Validator()
         self.sessions = dict()
         self.sessions_lock = asyncio.Lock()
+        self.redis = RedisClient(config.PrivateDataPath)
 
     async def send_update(self, UID:str, reply:dating_server_pb2.GetUpdatesReply):
         logger.debug(f"send_update for UID: {UID} and reply: {FullMessageToDict(reply)}")
@@ -45,6 +49,7 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
             if request.UID in self.sessions:
                 await self.sessions[request.UID].put(None)
             self.sessions[request.UID] = responce_queue
+            self.redis.register_session(request.UID, self.shard)
         logger.info(f"start GetUpdates waiting for {request.UID}")
         try:
             while True:
@@ -56,5 +61,14 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
                 logger.debug(f"waiting ro new responce for UID:{request.UID}")
         except Exception as e:
             logger.error(f"got exception {str(e) + str(traceback.format_exc())}")
+        # except asyncio.CancelledError as e:
+        #     logger.error(f"conncection UID:{request.UID} canceled: {str(e)}")
+        except:
+            logger.error(f"conncection UID:{request.UID} canceled")
+        finally:
+            async with self.sessions_lock:
+                self.sessions.pop(request.UID)
+            self.redis.end_session(request.UID, self.shard)
+
 
 

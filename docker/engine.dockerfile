@@ -9,6 +9,7 @@ RUN pip install pyopenssl
 RUN pip install grpcio
 RUN pip install grpcio-tools
 RUN pip install couchbase==4.1.2
+RUN pip install redis-py-cluster
 
 RUN pip install uuid
 RUN pip install firebase-admin

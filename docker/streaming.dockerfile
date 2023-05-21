@@ -11,6 +11,8 @@ RUN pip install grpcio-tools
 RUN pip install asyncio
 RUN pip install aiokafka
 RUN pip install firebase-admin
+RUN pip install redis-py-cluster
+
 
 RUN pip install kafka-python lz4 python-snappy crc32c
 

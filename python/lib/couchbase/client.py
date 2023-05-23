@@ -20,10 +20,9 @@ from couchbase.logic.search import SortGeoDistance
 
 from google.protobuf.json_format import MessageToDict
 
-from lib.misc import DictToMessage
+from lib.misc import DictToMessage, get_timestamp
 
 import uuid
-import time
 
 logger = logging.getLogger("lib")
 
@@ -142,6 +141,7 @@ class CouchbaseClient:
         SELECT *
         FROM `dating-data`.indexing_jsons.reactions_data
         WHERE FromUID=$uid {only_matches_str}
+        ORDER BY Timestamp DESC
         OFFSET $offset
         LIMIT $limit"""
         result = self.cluster.query(query, uid=FromUID, offset=offset, limit=limit)
@@ -164,6 +164,7 @@ class CouchbaseClient:
         SELECT *
         FROM `dating-data`.indexing_jsons.reactions_data
         WHERE ToUID=$uid {only_matches_str}
+        ORDER BY Timestamp DESC
         OFFSET $offset
         LIMIT $limit"""
         result = self.cluster.query(query, uid=ToUID, offset=offset, limit=limit)
@@ -188,10 +189,27 @@ class CouchbaseClient:
         reaction = DictToMessage(result.content_as[dict], user_pb2.TReaction)
         return reaction
 
+    def get_reactions(self, FromUID:str, ToUIDs:list):
+        query = f"""
+        SELECT *
+        FROM `dating-data`.indexing_jsons.reactions_data
+        WHERE (FromUID=$fromUID and ToUID in $uids) or (ToUID=$fromUID and FromUID in $uids)
+        """
+        result = self.cluster.query(query, fromUID=FromUID, uids=ToUIDs)
+        reactions = [
+            DictToMessage(row['reactions_data'], user_pb2.TReaction)
+            for row in result
+        ]
+        from_reqctions = {r.ToUID:r for r in reactions if r.FromUID == FromUID}
+        to_reqctions = {r.FromUID:r for r in reactions if r.ToUID == FromUID}
+        return {uid:(from_reqctions.get(uid), to_reqctions.get(uid)) for uid in ToUIDs}
+
     def upsert_reaction(
         self,
         reaction: user_pb2.TReaction
     ):
+
+        reaction.Timestamp = get_timestamp()
         self.reactions_collection.upsert(
             reaction.FromUID + "_" + reaction.ToUID,
             MessageToDict(reaction)
@@ -208,7 +226,7 @@ class CouchbaseClient:
         self,
         message: user_pb2.TMessage,
     ):
-        message.Timestamp = time.time_ns()
+        message.Timestamp = get_timestamp()
         self.messages_collection.upsert(
             str(uuid.uuid4()),
             MessageToDict(message)

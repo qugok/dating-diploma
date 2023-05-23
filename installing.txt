@@ -49,6 +49,7 @@ sudo docker build -t cr.yandex/crpmht6s4vkhnj1pe05c/python-engine .
 sudo docker push cr.yandex/crpmht6s4vkhnj1pe05c/python-engine
 
 
+# sudo docker run -p 20000:20000 python-engine
 
 
 sudo docker run -p 20000:20000 python-dating-engine

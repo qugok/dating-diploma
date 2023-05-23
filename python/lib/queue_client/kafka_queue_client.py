@@ -3,9 +3,15 @@ from kafka import KafkaConsumer
 
 from generated.config_pb2 import TQueueClientConfig
 
+import logging
+
+logger = logging.getLogger("queue_client")
 
 class QueueClient:
     def __init__(self, config:TQueueClientConfig) -> None:
+        if not config.UserName:
+            logger.error("there is no UserName in config")
+            return
         args = {
             "bootstrap_servers": ['rc1a-itvja874bn7p94mb.mdb.yandexcloud.net:9091'],
             "security_protocol": "SASL_SSL",

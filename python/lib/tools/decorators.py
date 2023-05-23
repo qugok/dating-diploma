@@ -48,8 +48,9 @@ def process_simple_request(reply_class):
 
             try:
                 logger.debug(f"Processiong {request_func.__name__} request: {FullMessageToDict(request, True)}")
-                if not self.validator.validate(request_func.__name__, request):
-                    raise WrongRequest(f"validation failed. Type: {request_func.__name__} request: {FullMessageToDict(request, True)}")
+                error = self.validator.validate(request_func.__name__, request)
+                if error is not None:
+                    raise WrongRequest(f"validation failed. Type: {request_func.__name__} request: {FullMessageToDict(request, True)}; error message: {error}")
                 logger.debug(f"Valid request: {request_func.__name__} request: {FullMessageToDict(request, True)}")
                 kws = request_func(self, request, context, user_auth_info)
                 logger.debug(f"Processed {request_func.__name__} request, result: {FullMessageToDict(kws)}")

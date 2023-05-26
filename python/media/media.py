@@ -18,8 +18,6 @@ def get_path_prefix(m_type: user_pb2.EMediaType):
         return "video"
 
 class MediaManager:
-    # TODO добавить валидацию, где необходимо
-    # TODO реально важно добавить валидацию
     def __init__(self):
         # TODO добавить отдельный конфиг для менеджера
         self.client = YandexObjectStorageClient()

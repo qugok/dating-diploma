@@ -17,6 +17,7 @@ from couchbase.transcoder import RawBinaryTranscoder
 import couchbase.search as search
 from couchbase.logic.search_queries import GeoDistanceQuery
 from couchbase.logic.search import SortGeoDistance
+from couchbase.exceptions import TransactionFailed, TransactionCommitAmbiguous
 
 from google.protobuf.json_format import MessageToDict
 
@@ -232,15 +233,43 @@ class CouchbaseClient:
             MessageToDict(message)
         )
 
-    def read_messages(
+    def move_messages_to_cold(
+        self,
+        keys:list,
+    ):
+        def transaction(ctx):
+            copy_query = f"""
+                UPSERT INTO `dating-data`.indexing_jsons.cold_messages_data
+                (key id, value v)
+                SELECT META().id as id, messages_data as v
+                FROM `dating-data`.indexing_jsons.messages_data
+                USE KEYS {keys}
+            """
+            ctx.query(copy_query)
+            delete_query = f"""
+                DELETE FROM `dating-data`.indexing_jsons.messages_data
+                USE KEYS {keys}
+            """
+            ctx.query(delete_query)
+
+
+        try:
+            self.cluster.transactions.run(transaction)
+        except TransactionFailed as ex:
+            logger.error(f'Transaction did not reach commit point.  Error: {ex}')
+        except TransactionCommitAmbiguous as ex:
+            logger.error(f'Transaction possibly committed.  Error: {ex}')
+
+    def read_hot_messages(
         self,
         UID1: str,
         UID2: str,
         offset=0,
         limit=100,
+        return_keys:bool=False
     ):
         query = """
-        SELECT *
+        SELECT META().id as id, *
         FROM `dating-data`.indexing_jsons.messages_data
         WHERE (FromUID=$uid1 AND ToUID=$uid2) OR (FromUID=$uid2 AND ToUID=$uid1)
         ORDER BY Timestamp DESC
@@ -248,17 +277,71 @@ class CouchbaseClient:
         LIMIT $limit"""
         result = self.cluster.query(query, uid1=UID1, uid2=UID2, offset=offset, limit=limit)
 
+        if return_keys:
+             messages = [
+                (row["id"], DictToMessage(row['messages_data'], user_pb2.TMessage))
+                for row in result
+            ]
+        else:
+            messages = [
+                DictToMessage(row['messages_data'], user_pb2.TMessage)
+                for row in result
+            ]
+
+        return messages
+
+
+    def hot_messages_count(
+        self,
+        UID1: str,
+        UID2: str,
+    ):
+        query = """
+        SELECT COUNT(*) as count
+        FROM `dating-data`.indexing_jsons.messages_data
+        WHERE (FromUID=$uid1 AND ToUID=$uid2) OR (FromUID=$uid2 AND ToUID=$uid1)
+        """
+        result = self.cluster.query(query, uid1=UID1, uid2=UID2)
+
+        for row in result:
+            return row["count"]
+        return 0
+
+    def read_cold_messages(
+        self,
+        UID1: str,
+        UID2: str,
+        offset=0,
+        limit=100,
+    ):
+        query = """
+        SELECT META().id as id, *
+        FROM `dating-data`.indexing_jsons.cold_messages_data
+        WHERE (FromUID=$uid1 AND ToUID=$uid2) OR (FromUID=$uid2 AND ToUID=$uid1)
+        ORDER BY Timestamp DESC
+        OFFSET $offset
+        LIMIT $limit"""
+        result = self.cluster.query(query, uid1=UID1, uid2=UID2, offset=offset, limit=limit)
+
         messages = [
-            DictToMessage(row['messages_data'], user_pb2.TMessage)
+            DictToMessage(row['cold_messages_data'], user_pb2.TMessage)
             for row in result
         ]
 
         return messages
 
-    def get_chat(self, key:str):
-        result = self.chats_collection.get(
-            key,
-        )
+    def _make_chat_key(self, UID1:str, UID2:str):
+        UID1, UID2 = min(UID1, UID2), max(UID1, UID2)
+        return UID1 + "_" + UID2
+
+    def get_chat(
+        self,
+        UID1:str,
+        UID2:str
+    ):
+        chat_id = self._make_chat_key(UID1, UID2)
+        print(chat_id)
+        result = self.chats_collection.get(chat_id)
         chat = DictToMessage(result.content_as[dict], user_pb2.TChat)
         return chat
 
@@ -284,11 +367,30 @@ class CouchbaseClient:
         ]
         return chats
 
-    def upsert_chat(
+    def update_chat(
         self,
-        chat: user_pb2.TChat,
+        UID1:str,
+        UID2:str,
+        last_message:user_pb2.TMessage,
+        new_messages_count:int,
     ):
-        self.chats_collection.upsert(
-            chat.UID1 + "_" + chat.UID2,
-            MessageToDict(chat)
+        chat_id = self._make_chat_key(UID1, UID2)
+        if not self.chats_collection.exists(chat_id).exists:
+            chat = user_pb2.TChat(UID1=UID1, UID2=UID2, LastMessage=last_message, TotalMessageCount=new_messages_count)
+            self.chats_collection.insert(chat_id, MessageToDict(chat))
+            return
+
+        result = self.chats_collection.get(chat_id)
+        chat = DictToMessage(result.content_as[dict], user_pb2.TChat)
+        if chat.TotalMessageCount:
+            chat.TotalMessageCount += new_messages_count
+        else:
+            chat.TotalMessageCount = self.hot_messages_count(UID1, UID2)
+        chat.LastMessage.CopyFrom(last_message)
+
+        self.chats_collection.replace(
+            chat_id,
+            MessageToDict(chat),
+            ReplaceOptions(cas=result.cas)
         )
+

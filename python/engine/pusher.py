@@ -15,35 +15,27 @@ class Pusher:
         self.queue_client = QueueClient(config.QueueClientConfig)
         self.redis = RedisClient(config.PrivateDataPath)
 
-
-    def send_message(self, message:user_pb2.TMessage):
-        shard = self.redis.get_current_shard(message.ToUID)
-        logger.debug(f"got shard: {shard} for UID: {message.ToUID}")
-        if shard is not None:
-            stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_MESSAGE, Messages=[message])
-            self.queue_client.write_to("streaming_queue", stream_event.SerializeToString(), shard)
-        else:
-            push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_MESSAGE, Messages=[message])
-            self.queue_client.write_to("processor_queue", push_event.SerializeToString())
-
+    def send_cool_down_messages_request(self, UID1:str, UID2:str):
+        event = event_pb2.TEvent(Type=event_pb2.EET_COOL_DOWN_MESSAGES, UID1=UID1, UID2=UID2)
+        self.queue_client.write_to("processor_queue", event.SerializeToString())
 
     def send_messages(self, messages):
-        for message in messages:
-            self.send_message(message)
-
-
-    def send_reaction(self, reaction:user_pb2.TReaction):
-        shard = self.redis.get_current_shard(reaction.ToUID)
-        logger.debug(f"got shard: {shard} for UID: {reaction.ToUID}")
+        shard = self.redis.get_current_shard(messages[0].ToUID)
+        logger.debug(f"got shard: {shard} for UID: {messages[0].ToUID}")
         if shard is not None:
-            stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_REACTION, Reactions=[reaction])
-            self.queue_client.write_to("streaming_queue", stream_event.SerializeToString())
+            stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_MESSAGE, Messages=messages)
+            self.queue_client.write_to("streaming_queue", stream_event.SerializeToString(), shard)
         else:
-            push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_REACTION, Reactions=[reaction])
+            push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_MESSAGE, Messages=messages)
             self.queue_client.write_to("processor_queue", push_event.SerializeToString())
 
-
     def send_reactions(self, reactions):
-        for reaction in reactions:
-            self.send_reaction(reaction)
+        shard = self.redis.get_current_shard(reactions[0].ToUID)
+        logger.debug(f"got shard: {shard} for UID: {reactions[0].ToUID}")
+        if shard is not None:
+            stream_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_STREAM_REACTION, Reactions=reactions)
+            self.queue_client.write_to("streaming_queue", stream_event.SerializeToString())
+        else:
+            push_event = event_pb2.TEvent(Type=event_pb2.EET_SEND_PUSH_REACTION, Reactions=reactions)
+            self.queue_client.write_to("processor_queue", push_event.SerializeToString())
 

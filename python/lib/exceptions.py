@@ -26,7 +26,7 @@ class WrongRequest(DatingServerException):
 
     def __init__(self, message:str):
         self.message = message
-        self.e_type = TErrorInfo.EET_INTERNAL
+        self.e_type = TErrorInfo.EET_BAD_REQUEST
 
     def __str__(self) -> str:
         return f"wrong request: {self.message}"
@@ -34,7 +34,7 @@ class WrongRequest(DatingServerException):
 class KeyDontExist(DatingServerException):
 
     def __init__(self, base:str, key:str, ) -> None:
-        self.e_type = TErrorInfo.EET_INTERNAL
+        self.e_type = TErrorInfo.EET_WRONG_REQUEST_DATA
         self.base = base
         self.key = key
     def __str__(self) -> str:
@@ -44,7 +44,7 @@ class KeyDontExist(DatingServerException):
 class KeyAlreadyExist(DatingServerException):
 
     def __init__(self, base:str, key:str, ) -> None:
-        self.e_type = TErrorInfo.EET_INTERNAL
+        self.e_type = TErrorInfo.EET_WRONG_REQUEST_DATA
         self.base = base
         self.key = key
     def __str__(self) -> str:

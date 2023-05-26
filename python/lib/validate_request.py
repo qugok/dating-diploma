@@ -37,7 +37,7 @@ class Validator:
     def validate_GetUser(self, request:dating_server_pb2.GetUserRequest):
         if not request.UID:
             return "UID should be set; "
-        return ""
+        return None
 
     def _good_age(self, age):
         if not age:
@@ -72,11 +72,12 @@ class Validator:
             error += "Age should be set; "
         else:
             error += self._good_age(user.Age)
-        if not user.HasField("Interests"):
-            error += "Interests should be set; "
-        else:
+        # if not user.HasField("Interests"):
+        #     error += "Interests should be set; "
+        # else:
+        #     error += self._validate_interests(user.Interests)
+        if user.HasField("Interests"):
             error += self._validate_interests(user.Interests)
-
         return error
 
     def _validate_Media(self, medias):
@@ -125,10 +126,8 @@ class Validator:
 
     def validate_GetReactions(self, request:dating_server_pb2.GetReactionsRequest):
         error = ""
-        if not request.FromUID:
-            error += "FromUID should be set; "
-        if not request.ToUID:
-            error += "ToUID should be set; "
+        if not request.FromUID and not request.ToUID:
+            error += "FromUID or ToUID should be set; "
         return error if error else None
 
     def validate_SetReaction(self, request:dating_server_pb2.SetReactionRequest):
@@ -157,8 +156,17 @@ class Validator:
         error = ""
         if len(request.Messages) == 0:
             error += "Messages should not be empty; "
+        from_uids = set()
+        to_uids = set()
         for m in request.Messages:
+            from_uids.add(m.FromUID)
+            to_uids.add(m.ToUID)
             error += self.__Message(m)
+
+        if len(from_uids) > 1:
+            error += f"all messages in request should be from one UID, got UIDs: {from_uids};"
+        if len(to_uids) > 1:
+            error += f"all messages in request should be to one UID, got UIDs: {to_uids};"
         return error if error else None
 
     def validate_GetLastMessages(self, request:dating_server_pb2.GetLastMessagesRequest):

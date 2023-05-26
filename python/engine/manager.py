@@ -5,7 +5,7 @@ from engine.pusher import Pusher
 from lib.tools.proto_utils import FullMessageToDict
 from lib.exceptions import UserDontExist, KeyDontExist, KeyAlreadyExist
 from lib.misc import get_time_delta
-
+from lib.consts import MAX_POSSIBLY_HOT_MESSAGES_COUNT
 from itertools import zip_longest, chain
 
 
@@ -44,9 +44,13 @@ class Manager:
         self.couchbase_client.set_message_token(UID, token)
 
     def __get_and_order_sutable_users(self, user: user_pb2.TUser, uids):
+        if not user.HasField("Interests"):
+            return [self.couchbase_client.get_user(uid) for uid in uids]
         user_interests = {interest.Type : interest.Value for interest in user.Interests.Interests}
         def check_user(u: user_pb2.TUser):
             if u.UID == user.UID:
+                return False
+            if not u.HasField("Interests"):
                 return False
             users_lookung_for_gender = user.Interests.LookingForGender or user.LookingForGenderDeprecated or user_pb2.EG_FEMALE
             other_lookung_for_gender = u.Interests.LookingForGender or u.LookingForGenderDeprecated or user_pb2.EG_FEMALE
@@ -61,13 +65,15 @@ class Manager:
 
         def suitability(interests_proto:user_pb2.TInterests):
             anti_suitability = 0
+            local_suitability = 0
             interests = {interest.Type : interest.Value for interest in interests_proto.Interests}
             for interest, value in user_interests.items():
                 if interest not in interests:
-                    anti_suitability += 1
+                    anti_suitability += 100
                     continue
-                anti_suitability += pow(value - interests[interest], 2)
-            return -anti_suitability
+
+                local_suitability += (value - 50) * (interests[interest] - 50)
+            return local_suitability - anti_suitability
         users = [self.couchbase_client.get_user(uid) for uid in uids]
         filtered_users = [u for u in users if check_user(u)]
         sorted_users = sorted(filtered_users, key=lambda u: suitability(u.Interests))
@@ -86,6 +92,10 @@ class Manager:
             if reactionTo is not None:
                 return False
             if reactionFrom is not None and reactionFrom.ReactionType == user_pb2.TReaction.ERT_DISLIKE:
+                return False
+            if reactionFrom is not None and \
+                reactionFrom.ReactionType == user_pb2.TReaction.ERT_LIKE and\
+                    get_time_delta(reactionFrom.Timestamp).days < 30:
                 return False
             return True
 
@@ -108,6 +118,8 @@ class Manager:
         )
         users_queue = chain.from_iterable(zip_longest(others, must_have, fillvalue=None))
         users = [user for user in users_queue if user is not None]
+        if len(users) == 0:
+            return [self.couchbase_client.get_user([uid for uid in self.couchbase_client.search_near(geo, f"{100000}km", limit) if uid != UID][-1])]
         return users
 
     def get_reactions(self, FromUID:str, ToUID:str, only_matches:bool, offset=0, limit=100):
@@ -127,7 +139,7 @@ class Manager:
         ReactionType: user_pb2.TReaction.EReactionType
     ):
         """
-        добавляет реакцию, ~~только если её не было раньше, иначе выбрасывает исключение~~ всегда добавляет реакцию и приводит в
+        добавляет реакцию, всегда добавляет реакцию и приводит в соответсвтие поле isMatch
 
         """
         reaction = user_pb2.TReaction(FromUID=FromUID, ToUID=ToUID, ReactionType=ReactionType)
@@ -156,9 +168,20 @@ class Manager:
         self,
         messages # repeated user_pb2.TMessage,
     ):
+        UID1, UID2 = messages[-1].FromUID, messages[-1].ToUID
+
+        old_hot_messages_count = self.couchbase_client.hot_messages_count(UID1, UID2)
+        actual_hot_messages_count = old_hot_messages_count + len(messages)
         self.couchbase_client.store_messages(messages)
         self.pusher.send_messages(messages)
-        self.set_chat_last_message(messages[-1])
+
+        self.couchbase_client.update_chat(UID1, UID2, messages[-1], len(messages))
+
+        #TODO выделить условие охлаждения в отдельную функцию и сделать более умным
+        if (actual_hot_messages_count // MAX_POSSIBLY_HOT_MESSAGES_COUNT) - (old_hot_messages_count // MAX_POSSIBLY_HOT_MESSAGES_COUNT) > 0:
+            logger.debug(f"cool_down_messages. actual: {actual_hot_messages_count}; old: {old_hot_messages_count}; MAX: {MAX_POSSIBLY_HOT_MESSAGES_COUNT}")
+            self.pusher.send_cool_down_messages_request(UID1, UID2)
+
 
     def read_messages(
         self,
@@ -167,16 +190,21 @@ class Manager:
         offset=0,
         limit=100
     ):
-        messages = self.couchbase_client.read_messages(FromUID, ToUID, offset, limit)
-        return messages
+        messages = self.couchbase_client.read_hot_messages(FromUID, ToUID, offset, limit)
+        if offset + limit <= len(messages):
+            return messages
 
-    def set_chat_last_message(
-        self,
-        message:user_pb2.TMessage
-    ):
-        UID1, UID2 = min(message.FromUID, message.ToUID), max(message.ToUID, message.FromUID)
-        chat = user_pb2.TChat(UID1=UID1, UID2=UID2, LastMessage=message)
-        self.couchbase_client.upsert_chat(chat)
+        chat = self.couchbase_client.get_chat(FromUID, ToUID)
+        if chat.TotalMessageCount == offset + len(messages):
+            return messages
+
+        if len(messages) > 0:
+            cold_messages = self.couchbase_client.read_cold_messages(FromUID, ToUID, 0, limit - len(messages))
+            return messages + cold_messages
+
+        hot_messages_count = self.couchbase_client.hot_messages_count(FromUID, ToUID)
+        cold_messages = self.couchbase_client.read_cold_messages(FromUID, ToUID, max(0, offset - hot_messages_count), limit)
+        return cold_messages
 
     def get_chats(
         self,

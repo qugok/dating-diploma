@@ -12,6 +12,8 @@ from lib.tools.proto_utils import FullMessageToDict
 from lib.tools.decorators import process_simple_request
 # from lib.auth import FirebaseApp
 from lib.validate_request import Validator
+from lib.auth import FirebaseApp
+from lib.request.wrapper import SetErrorReply, SetOkReplyStatus
 from lib.redis.client import RedisClient
 # from engine.manager import Manager
 import traceback
@@ -29,6 +31,7 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
         self.sessions = dict()
         self.sessions_lock = asyncio.Lock()
         self.redis = RedisClient(config.PrivateDataPath)
+        self.auth = FirebaseApp(config.Auth)
 
     async def send_update(self, UID:str, reply:dating_server_pb2.GetUpdatesReply):
         logger.debug(f"send_update for UID: {UID} and reply: {FullMessageToDict(reply)}")
@@ -42,23 +45,43 @@ class StreamingDatingServer(dating_server_pb2_grpc.DatingServerServicer):
 
     async def GetUpdates(self, request:dating_server_pb2.GetUpdatesRequest, context):
         logger.info(f"Got GetUpdates request: {FullMessageToDict(request)}")
-        rsp = dating_server_pb2.GetUpdatesReply(Status=misc_pb2.ERS_OK)
-        yield rsp
-        responce_queue = asyncio.Queue()
+        user_auth_info = self.auth.authenticate_user(request.Auth)
+        logger.debug(f"authentication got user_auth_info: {user_auth_info}")
+        if user_auth_info is None:
+            logger.debug(f"ErrorReply: authentication user_auth_info: {user_auth_info}")
+            yield SetErrorReply(
+                dating_server_pb2.GetUpdatesReply(),
+                f"authentication error for user auth {FullMessageToDict(request.Auth)}",
+                misc_pb2.TErrorInfo.EET_AUTHORIZATION
+            )
+            return
+
+        if request.UID:
+            yield SetOkReplyStatus(dating_server_pb2.GetUpdatesReply())
+        else:
+            yield SetErrorReply(
+                    dating_server_pb2.GetUpdatesReply(),
+                    "request shuld have uid",
+                    misc_pb2.TErrorInfo.EET_BAD_REQUEST
+                )
+            return
+
+
+        response_queue = asyncio.Queue()
         async with self.sessions_lock:
             if request.UID in self.sessions:
                 await self.sessions[request.UID].put(None)
-            self.sessions[request.UID] = responce_queue
+            self.sessions[request.UID] = response_queue
             self.redis.register_session(request.UID, self.shard)
         logger.info(f"start GetUpdates waiting for {request.UID}")
         try:
             while True:
-                new_item = await responce_queue.get()
+                new_item = await response_queue.get()
                 if new_item is None:
                     return
                 logger.debug(f"sending for UID:{request.UID} event: {FullMessageToDict(new_item)}")
                 yield new_item
-                logger.debug(f"waiting ro new responce for UID:{request.UID}")
+                logger.debug(f"waiting ro new response for UID:{request.UID}")
         except Exception as e:
             logger.error(f"got exception {str(e) + str(traceback.format_exc())}")
         # except asyncio.CancelledError as e:
